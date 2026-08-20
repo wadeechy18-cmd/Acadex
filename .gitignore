@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+backend/.env
+
+# Node
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+frontend/.env
+frontend/.env.local
+
+# Build/misc
+dist/
+build/
+*.log
+.DS_Store
+.vscode/
+.idea/
+
+# DB
+*.sqlite3
+postgres-data/

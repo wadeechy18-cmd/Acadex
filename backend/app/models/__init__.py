@@ -1,0 +1,60 @@
+from app.models.user import AdminProfile, StudentProfile, TeacherProfile, TeacherSubject, User
+from app.models.education import Chapter, Course, EducationLevel, ExamBoard, Lesson, Subject, Topic
+from app.models.content import Note, Video
+from app.models.question import Question, QuestionOption, TopicTag, question_topic_tags
+from app.models.quiz import Quiz, QuizAnswer, QuizAttempt, QuizQuestion
+from app.models.learning import Bookmark, Enrollment, Progress, StudySession
+from app.models.community import Comment, Discussion, QuestionImage, QuestionThread, Report, Vote
+from app.models.pastpaper import PastPaper, PastPaperQuestion, PastPaperResource
+from app.models.notification import Notification
+from app.models.live_class import LiveClass, LiveClassEnrollment, LiveClassRecording
+from app.models.billing import Entitlement, Payment, Purchase, Subscription
+from app.models.ai import AIConversation, AIMessage
+
+__all__ = [
+    "User",
+    "StudentProfile",
+    "TeacherProfile",
+    "AdminProfile",
+    "TeacherSubject",
+    "EducationLevel",
+    "ExamBoard",
+    "Subject",
+    "Course",
+    "Chapter",
+    "Topic",
+    "Lesson",
+    "Video",
+    "Note",
+    "Question",
+    "QuestionOption",
+    "TopicTag",
+    "question_topic_tags",
+    "Quiz",
+    "QuizQuestion",
+    "QuizAttempt",
+    "QuizAnswer",
+    "Enrollment",
+    "Progress",
+    "Bookmark",
+    "StudySession",
+    "Discussion",
+    "Comment",
+    "QuestionThread",
+    "QuestionImage",
+    "Vote",
+    "Report",
+    "PastPaper",
+    "PastPaperResource",
+    "PastPaperQuestion",
+    "Notification",
+    "LiveClass",
+    "LiveClassEnrollment",
+    "LiveClassRecording",
+    "Subscription",
+    "Payment",
+    "Purchase",
+    "Entitlement",
+    "AIConversation",
+    "AIMessage",
+]
