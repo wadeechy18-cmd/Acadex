@@ -25,9 +25,11 @@ export default function LandingPage() {
           <Link href="/login" className="text-sm font-medium text-slate-600 hover:text-slate-900">
             Log in
           </Link>
-          <Button variant="primary" className="text-sm">
-            Start Learning
-          </Button>
+          <Link href="/register">
+            <Button variant="primary" className="text-sm">
+              Start Learning
+            </Button>
+          </Link>
         </nav>
       </header>
 
@@ -44,8 +46,12 @@ export default function LandingPage() {
           International A-Level, and first-year Computer Science, in one place.
         </p>
         <div className="mt-8 flex justify-center gap-3">
-          <Button variant="primary">Start Learning</Button>
-          <Button variant="secondary">Explore Subjects</Button>
+          <Link href="/register">
+            <Button variant="primary">Start Learning</Button>
+          </Link>
+          <Link href="/subjects">
+            <Button variant="secondary">Explore Subjects</Button>
+          </Link>
         </div>
       </section>
 
