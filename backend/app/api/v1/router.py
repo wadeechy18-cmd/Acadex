@@ -9,10 +9,12 @@ from app.api.v1.endpoints import (
     health,
     learning,
     lessons,
+    notifications,
     pastpapers,
     practice,
     question_threads,
     quiz,
+    search,
     teacher,
 )
 
@@ -30,3 +32,5 @@ api_router.include_router(question_threads.router)
 api_router.include_router(teacher.router)
 api_router.include_router(admin.router)
 api_router.include_router(pastpapers.router)
+api_router.include_router(search.router)
+api_router.include_router(notifications.router)

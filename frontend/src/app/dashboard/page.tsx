@@ -13,10 +13,16 @@ export default function DashboardPage() {
   const { user, loading, logout } = useAuth();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
   }, [loading, user, router]);
+
+  useEffect(() => {
+    if (!user) return;
+    apiFetch<{ count: number }>("/notifications/me/unread-count", undefined, true).then((res) => setUnreadCount(res.count));
+  }, [user]);
 
   useEffect(() => {
     async function loadSummary() {
@@ -43,6 +49,17 @@ export default function DashboardPage() {
           <p className="mt-1 text-sm capitalize text-slate-600">{user.role} account</p>
         </div>
         <div className="flex items-center gap-3">
+          <Link href="/search" className="text-sm font-medium text-slate-600 hover:text-slate-900">
+            Search
+          </Link>
+          <Link href="/notifications" className="relative text-sm font-medium text-slate-600 hover:text-slate-900">
+            Notifications
+            {unreadCount > 0 && (
+              <span className="absolute -right-3 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white">
+                {unreadCount}
+              </span>
+            )}
+          </Link>
           {user.role === "student" && (
             <Link href="/ask">
               <Button variant="primary">Ask a question</Button>

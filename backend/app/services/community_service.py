@@ -88,13 +88,17 @@ def create_comment(
     parent_comment_id: uuid.UUID | None,
     body: str,
 ) -> Comment:
+    from app.services.notification_service import notify_comment_reply, notify_teacher_answer
+
     if not discussion_id and not question_thread_id:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "A comment must belong to a discussion or a question thread.")
     if discussion_id and not db.get(Discussion, discussion_id):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Discussion not found.")
-    if question_thread_id and not db.get(QuestionThread, question_thread_id):
+    question_thread = db.get(QuestionThread, question_thread_id) if question_thread_id else None
+    if question_thread_id and not question_thread:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Question thread not found.")
-    if parent_comment_id and not db.get(Comment, parent_comment_id):
+    parent_comment = db.get(Comment, parent_comment_id) if parent_comment_id else None
+    if parent_comment_id and not parent_comment:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Parent comment not found.")
 
     comment = Comment(
@@ -107,6 +111,15 @@ def create_comment(
     db.add(comment)
     db.commit()
     db.refresh(comment)
+
+    if parent_comment and parent_comment.author_id != user.id:
+        notify_comment_reply(db, parent_comment.author_id, comment.id, discussion_id, question_thread_id)
+    elif question_thread and question_thread.student_id != user.id:
+        if user.role == UserRole.TEACHER:
+            notify_teacher_answer(db, question_thread.student_id, comment.id, question_thread.id)
+        else:
+            notify_comment_reply(db, question_thread.student_id, comment.id, discussion_id, question_thread_id)
+
     return comment
 
 

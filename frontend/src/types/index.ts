@@ -372,3 +372,32 @@ export interface PastPaperDetail extends PastPaper {
   resources: PastPaperResource[];
   paper_questions: PastPaperQuestionLink[];
 }
+
+export interface SearchResult {
+  type: "subject" | "course" | "lesson" | "past_paper";
+  id: string;
+  title: string;
+  subtitle: string | null;
+  url: string;
+}
+
+export interface SearchResponse {
+  results: SearchResult[];
+}
+
+export type NotificationType =
+  | "comment_reply"
+  | "teacher_answer"
+  | "course_update"
+  | "new_lesson"
+  | "quiz_result"
+  | "teacher_announcement";
+
+export interface Notification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  payload: Record<string, unknown>;
+  read_at: string | null;
+  created_at: string;
+}
