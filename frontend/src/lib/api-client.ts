@@ -45,8 +45,11 @@ async function extractErrorMessage(res: Response): Promise<string> {
 }
 
 export async function apiFetch<T>(path: string, init?: RequestInit, authenticated = false): Promise<T> {
+  const isFormData = init?.body instanceof FormData;
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    // Omit Content-Type for FormData: the browser must set it (with the
+    // multipart boundary) itself.
+    ...(isFormData ? {} : { "Content-Type": "application/json" }),
     ...(init?.headers as Record<string, string>),
   };
 

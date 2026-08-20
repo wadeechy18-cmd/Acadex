@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { NoteBlocks } from "@/components/notes/NoteBlocks";
 import { VideoPlayer } from "@/components/lesson/VideoPlayer";
+import { TopicDiscussions } from "@/components/community/TopicDiscussions";
 import { apiFetch, ApiError } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
 import type { LessonDetail } from "@/types";
@@ -136,6 +137,13 @@ export default function LessonPage() {
         >
           Practice questions on this topic →
         </Link>
+      </div>
+
+      <div className="mt-8 border-t border-slate-200 pt-6">
+        <h2 className="text-lg font-semibold text-slate-900">Discussion</h2>
+        <div className="mt-4">
+          <TopicDiscussions topicId={breadcrumb.topic.id} />
+        </div>
       </div>
     </main>
   );

@@ -16,6 +16,10 @@ class Settings(BaseSettings):
 
     cors_origins: str = "http://localhost:3000"
 
+    # Used to turn locally-stored file keys into absolute URLs the frontend (a
+    # separate origin) can actually load.
+    public_base_url: str = "http://localhost:8000"
+
     storage_backend: str = "local"
     storage_local_path: str = "./uploads"
     storage_s3_bucket: str | None = None

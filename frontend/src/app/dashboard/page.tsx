@@ -42,9 +42,16 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-bold text-slate-900">Welcome back, {user.display_name.split(" ")[0]}</h1>
           <p className="mt-1 text-sm capitalize text-slate-600">{user.role} account</p>
         </div>
-        <Button variant="secondary" onClick={logout}>
-          Log out
-        </Button>
+        <div className="flex items-center gap-3">
+          {user.role === "student" && (
+            <Link href="/ask">
+              <Button variant="primary">Ask a question</Button>
+            </Link>
+          )}
+          <Button variant="secondary" onClick={logout}>
+            Log out
+          </Button>
+        </div>
       </div>
 
       {user.role !== "student" ? (

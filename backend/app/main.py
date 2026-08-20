@@ -1,5 +1,8 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -11,6 +14,10 @@ from app.core.limiter import limiter
 settings = get_settings()
 
 app = FastAPI(title="Acadex API", version="0.1.0")
+
+if settings.storage_backend == "local":
+    os.makedirs(settings.storage_local_path, exist_ok=True)
+    app.mount("/uploads", StaticFiles(directory=settings.storage_local_path), name="uploads")
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)

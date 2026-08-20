@@ -234,3 +234,53 @@ export interface QuizAnswerResult {
 export interface QuizAttemptResult extends QuizAttempt {
   answers: QuizAnswerResult[];
 }
+
+export interface CommentAuthor {
+  id: string;
+  display_name: string;
+  role: UserRole;
+  is_verified_teacher: boolean;
+}
+
+export interface Comment {
+  id: string;
+  body: string;
+  is_verified_teacher_answer: boolean;
+  is_pinned: boolean;
+  is_deleted: boolean;
+  created_at: string;
+  author: CommentAuthor;
+  vote_score: number;
+  my_vote: number | null;
+  replies: Comment[];
+}
+
+export interface Discussion {
+  id: string;
+  topic_id: string | null;
+  title: string;
+  created_by_id: string;
+  created_at: string;
+}
+
+export type QuestionThreadStatus = "open" | "answered" | "closed";
+
+export interface QuestionThread {
+  id: string;
+  student_id: string;
+  subject_id: string;
+  topic_id: string | null;
+  description: string | null;
+  status: QuestionThreadStatus;
+  created_at: string;
+}
+
+export interface QuestionImage {
+  id: string;
+  url: string;
+}
+
+export interface QuestionThreadDetail extends QuestionThread {
+  images: QuestionImage[];
+  comments: Comment[];
+}

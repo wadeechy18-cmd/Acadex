@@ -44,9 +44,10 @@ def safe_filename(original_filename: str) -> str:
 
 
 class LocalStorageBackend(StorageBackend):
-    def __init__(self, base_path: str) -> None:
+    def __init__(self, base_path: str, public_base_url: str = "") -> None:
         self.base_path = Path(base_path)
         self.base_path.mkdir(parents=True, exist_ok=True)
+        self.public_base_url = public_base_url.rstrip("/")
 
     def save(self, file_bytes: bytes, filename: str, content_type: str, folder: str) -> str:
         target_dir = self.base_path / folder
@@ -57,7 +58,8 @@ class LocalStorageBackend(StorageBackend):
         return key
 
     def url_for(self, storage_key: str) -> str:
-        return f"/uploads/{storage_key}"
+        # Absolute, since the frontend is a separate origin from the API.
+        return f"{self.public_base_url}/uploads/{storage_key}"
 
     def delete(self, storage_key: str) -> None:
         target = self.base_path / storage_key
@@ -89,7 +91,7 @@ class S3StorageBackend(StorageBackend):
 def get_storage_backend() -> StorageBackend:
     settings = get_settings()
     if settings.storage_backend == "local":
-        return LocalStorageBackend(settings.storage_local_path)
+        return LocalStorageBackend(settings.storage_local_path, settings.public_base_url)
     return S3StorageBackend(
         bucket=settings.storage_s3_bucket or "",
         region=settings.storage_s3_region,
