@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api-client";
@@ -98,7 +99,12 @@ export default function AdminDashboardPage() {
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-12">
-      <h1 className="text-2xl font-bold text-slate-900">Admin dashboard</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-slate-900">Admin dashboard</h1>
+        <Link href="/admin/past-papers" className="text-sm font-medium text-brand-700 hover:underline">
+          Manage past papers →
+        </Link>
+      </div>
 
       <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {STAT_LABELS.map(([key, label]) => (

@@ -133,7 +133,7 @@ export default function TeacherDashboardPage() {
               ))}
             </select>
           </div>
-          <Input label="Course title" value={newCourseTitle} onChange={(e) => setNewCourseTitle(e.target.value)} />
+          <Input label="Course title" name="courseTitle" value={newCourseTitle} onChange={(e) => setNewCourseTitle(e.target.value)} />
           <Button type="submit" disabled={creating} className="self-start">
             {creating ? "Creating…" : "Create course"}
           </Button>

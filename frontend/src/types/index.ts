@@ -338,3 +338,37 @@ export interface AdminReportRow {
   status: ReportStatus;
   created_at: string;
 }
+
+export type PastPaperSessionType = "january" | "may_june" | "october_november";
+
+export interface PastPaper {
+  id: string;
+  subject_id: string;
+  exam_board_id: string | null;
+  title: string;
+  year: number;
+  session: PastPaperSessionType;
+  paper_number: string;
+}
+
+export type PastPaperResourceType = "official_link" | "licensed_document" | "original_solution";
+
+export interface PastPaperResource {
+  id: string;
+  resource_type: PastPaperResourceType;
+  label: string;
+  external_url: string | null;
+  storage_key: string | null;
+}
+
+export interface PastPaperQuestionLink {
+  id: string;
+  question_id: string;
+  question_number: string;
+  marks: number;
+}
+
+export interface PastPaperDetail extends PastPaper {
+  resources: PastPaperResource[];
+  paper_questions: PastPaperQuestionLink[];
+}

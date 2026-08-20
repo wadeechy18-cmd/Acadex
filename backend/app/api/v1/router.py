@@ -9,6 +9,7 @@ from app.api.v1.endpoints import (
     health,
     learning,
     lessons,
+    pastpapers,
     practice,
     question_threads,
     quiz,
@@ -28,3 +29,4 @@ api_router.include_router(comments.router)
 api_router.include_router(question_threads.router)
 api_router.include_router(teacher.router)
 api_router.include_router(admin.router)
+api_router.include_router(pastpapers.router)

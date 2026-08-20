@@ -22,6 +22,7 @@ from app.models.education import (
     Subject,
     Topic,
 )
+from app.models.pastpaper import PastPaper, PastPaperSession
 from app.models.question import Difficulty, Question, QuestionOption, QuestionType
 from app.models.quiz import Quiz, QuizQuestion
 
@@ -281,6 +282,23 @@ def main() -> None:
                     QuizQuestion(quiz_id=quiz.id, question_id=numerical.id, order_index=1),
                 ]
             )
+
+        db.commit()
+
+        # Metadata only, matching the product spec's walkthrough example
+        # (GCSE -> Edexcel -> Mathematics -> 2025 -> Paper 1). No resources are
+        # attached here — we don't have the rights to host or link to any real
+        # exam paper, so that's left for an admin to add through the past-papers
+        # admin tools once they have properly licensed content or an official URL.
+        get_or_create(
+            db,
+            PastPaper,
+            subject_id=maths_subject.id,
+            year=2025,
+            session=PastPaperSession.MAY_JUNE,
+            paper_number="1",
+            defaults={"title": "GCSE Mathematics (Edexcel) — 2025 Paper 1", "exam_board_id": edexcel_gcse.id},
+        )
 
         db.commit()
         print("Seed content created.")

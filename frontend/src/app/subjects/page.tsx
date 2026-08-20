@@ -23,9 +23,14 @@ export default function SubjectsPage() {
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-12">
-      <Link href="/" className="text-sm font-medium text-brand-700 hover:underline">
-        ← Back home
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link href="/" className="text-sm font-medium text-brand-700 hover:underline">
+          ← Back home
+        </Link>
+        <Link href="/past-papers" className="text-sm font-medium text-brand-700 hover:underline">
+          Browse past papers →
+        </Link>
+      </div>
       <h1 className="mt-4 text-3xl font-bold text-slate-900">Explore subjects</h1>
       <p className="mt-1 text-slate-600">Pick your level to see the subjects available.</p>
 
