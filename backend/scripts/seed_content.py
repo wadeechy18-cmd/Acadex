@@ -22,6 +22,8 @@ from app.models.education import (
     Subject,
     Topic,
 )
+from app.models.question import Difficulty, Question, QuestionOption, QuestionType
+from app.models.quiz import Quiz, QuizQuestion
 
 
 def get_or_create(db, model, defaults: dict | None = None, **filters):
@@ -218,6 +220,67 @@ def main() -> None:
                 ],
             },
         )
+
+        db.commit()
+
+        mcq, created = get_or_create(
+            db,
+            Question,
+            prompt="What are the roots of x^2 - 5x + 6 = 0?",
+            subject_id=maths_subject.id,
+            defaults={
+                "topic_id": quadratics.id,
+                "chapter_id": algebra.id,
+                "question_type": QuestionType.MCQ,
+                "difficulty": Difficulty.MEDIUM,
+                "marks": 2,
+                "explanation": "x^2 - 5x + 6 factorises to (x-2)(x-3) = 0, so x = 2 or x = 3.",
+                "is_published": True,
+            },
+        )
+        if created:
+            db.add_all(
+                [
+                    QuestionOption(question_id=mcq.id, text="x = 2 or x = 3", is_correct=True, order_index=0),
+                    QuestionOption(question_id=mcq.id, text="x = -2 or x = -3", is_correct=False, order_index=1),
+                    QuestionOption(question_id=mcq.id, text="x = 1 or x = 6", is_correct=False, order_index=2),
+                    QuestionOption(question_id=mcq.id, text="x = 5 or x = 6", is_correct=False, order_index=3),
+                ]
+            )
+
+        numerical, _ = get_or_create(
+            db,
+            Question,
+            prompt="Solve for the positive root of x^2 - 9 = 0.",
+            subject_id=maths_subject.id,
+            defaults={
+                "topic_id": quadratics.id,
+                "chapter_id": algebra.id,
+                "question_type": QuestionType.NUMERICAL,
+                "difficulty": Difficulty.EASY,
+                "marks": 1,
+                "correct_answer": "3",
+                "explanation": "x^2 = 9, so x = 3 or x = -3. The positive root is 3.",
+                "is_published": True,
+            },
+        )
+
+        db.commit()
+
+        quiz, created = get_or_create(
+            db,
+            Quiz,
+            title="Quadratic Equations Quiz",
+            topic_id=quadratics.id,
+            defaults={"has_timer": False, "is_published": True},
+        )
+        if created:
+            db.add_all(
+                [
+                    QuizQuestion(quiz_id=quiz.id, question_id=mcq.id, order_index=0),
+                    QuizQuestion(quiz_id=quiz.id, question_id=numerical.id, order_index=1),
+                ]
+            )
 
         db.commit()
         print("Seed content created.")

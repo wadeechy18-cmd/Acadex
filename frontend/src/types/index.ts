@@ -171,3 +171,66 @@ export interface LessonDetail extends Lesson {
   breadcrumb: LessonBreadcrumb;
   my_progress: Progress | null;
 }
+
+export type QuestionType = "mcq" | "short_answer" | "numerical" | "true_false" | "structured";
+export type Difficulty = "easy" | "medium" | "hard";
+
+export interface QuestionOption {
+  id: string;
+  text: string;
+  order_index: number;
+}
+
+export interface QuestionSafe {
+  id: string;
+  subject_id: string;
+  exam_board_id: string | null;
+  chapter_id: string | null;
+  topic_id: string | null;
+  question_type: QuestionType;
+  difficulty: Difficulty;
+  marks: number;
+  prompt: string;
+  options: QuestionOption[];
+}
+
+export interface AnswerCheckResult {
+  is_correct: boolean | null;
+  correct_answer: string | null;
+  explanation: string | null;
+}
+
+export interface Quiz {
+  id: string;
+  topic_id: string | null;
+  chapter_id: string | null;
+  title: string;
+  has_timer: boolean;
+  time_limit_seconds: number | null;
+  is_published: boolean;
+}
+
+export interface QuizDetail extends Quiz {
+  questions: QuestionSafe[];
+}
+
+export interface QuizAttempt {
+  id: string;
+  quiz_id: string;
+  started_at: string | null;
+  submitted_at: string | null;
+  score: number | null;
+  percentage: number | null;
+}
+
+export interface QuizAnswerResult {
+  question_id: string;
+  student_answer: string | null;
+  is_correct: boolean | null;
+  correct_answer: string | null;
+  explanation: string | null;
+}
+
+export interface QuizAttemptResult extends QuizAttempt {
+  answers: QuizAnswerResult[];
+}

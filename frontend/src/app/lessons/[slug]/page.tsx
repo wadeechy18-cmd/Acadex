@@ -128,6 +128,15 @@ export default function LessonPage() {
       {!lesson.video && lesson.notes.length === 0 && (
         <p className="mt-8 text-sm text-slate-500">Content for this lesson is coming soon.</p>
       )}
+
+      <div className="mt-10 border-t border-slate-200 pt-6">
+        <Link
+          href={`/practice?topic_id=${breadcrumb.topic.id}&subject_id=${breadcrumb.subject.id}`}
+          className="text-sm font-medium text-brand-700 hover:underline"
+        >
+          Practice questions on this topic →
+        </Link>
+      </div>
     </main>
   );
 }
