@@ -6,8 +6,8 @@ quizzes, past papers, and a student-teacher discussion community, built on an
 architecture that supports future paid content, live classes, and AI tutoring
 without a rewrite.
 
-See `docs/ARCHITECTURE.md`, `docs/DATABASE_SCHEMA.md`, and `docs/MILESTONES.md`
-for the full design.
+See `docs/ARCHITECTURE.md`, `docs/DATABASE_SCHEMA.md`, `docs/MILESTONES.md`, and
+`docs/SECURITY.md` for the full design.
 
 ## Stack
 
@@ -38,6 +38,8 @@ python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env   # then point DATABASE_URL at your local Postgres
 alembic upgrade head
+python -m scripts.create_admin you@example.com "a-strong-password" "Your Name"
+python -m scripts.seed_content   # optional: sample subjects/courses/questions
 uvicorn app.main:app --reload
 ```
 
@@ -50,15 +52,33 @@ npm install
 npm run dev
 ```
 
+## Testing
+
+```bash
+createdb acadex_test   # once, alongside your regular acadex database
+cd backend
+source .venv/bin/activate
+pip install -r requirements-dev.txt
+pytest tests/ -v
+```
+
+See `docs/SECURITY.md` for what the suite covers and what was reviewed by hand.
+
 ## Project layout
 
 ```
-backend/    FastAPI app, SQLAlchemy models, Alembic migrations
+backend/    FastAPI app, SQLAlchemy models, Alembic migrations, pytest suite
 frontend/   Next.js app
-docs/       Architecture, database schema, milestone plan
+docs/       Architecture, database schema, milestone plan, security review
 ```
 
 ## Status
 
-Milestone 1 (project architecture) is complete. Authentication (Milestone 2) is
-next — see `docs/MILESTONES.md`.
+Milestones 1–12 are complete: architecture, authentication, the full learning
+hierarchy (levels → exam boards → subjects → courses → chapters → topics →
+lessons), student dashboard/enrollment/progress/bookmarks, video + notes,
+practice questions + quizzes, ask-a-question + discussions, teacher and admin
+dashboards, past papers, search + notifications, and an automated test +
+security review pass. See `docs/MILESTONES.md` for what's next (deployment,
+and the future live-classes/payments/AI-tutor features the schema is already
+ready for).

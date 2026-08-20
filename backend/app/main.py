@@ -13,6 +13,13 @@ from app.core.limiter import limiter
 
 settings = get_settings()
 
+if settings.environment == "production" and settings.secret_key == "change-me-to-a-long-random-string":
+    raise RuntimeError(
+        "SECRET_KEY is still the default placeholder. Set a unique, random SECRET_KEY "
+        "before running with ENVIRONMENT=production — it signs every access/refresh/"
+        "password-reset token."
+    )
+
 app = FastAPI(title="Acadex API", version="0.1.0")
 
 if settings.storage_backend == "local":
