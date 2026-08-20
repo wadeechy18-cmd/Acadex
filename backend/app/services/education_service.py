@@ -3,7 +3,7 @@ import uuid
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 
-from app.models.education import Chapter, Course, Lesson, Topic
+from app.models.education import Chapter, Course, Lesson, Subject, Topic
 from app.models.user import TeacherSubject, User, UserRole
 
 
@@ -62,6 +62,21 @@ def assert_can_manage_topic(db: Session, user: User, topic_id: uuid.UUID) -> Top
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Topic not found.")
     assert_can_manage_course(db, user, topic.chapter.course_id)
     return topic
+
+
+def assert_can_manage_lesson(db: Session, user: User, lesson_id: uuid.UUID) -> Lesson:
+    lesson = db.query(Lesson).options(joinedload(Lesson.topic)).filter(Lesson.id == lesson_id).first()
+    if not lesson:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Lesson not found.")
+    assert_can_manage_course(db, user, lesson.topic.chapter.course_id)
+    return lesson
+
+
+def get_breadcrumb(db: Session, topic: Topic) -> tuple[Chapter, Course, Subject]:
+    chapter = db.get(Chapter, topic.chapter_id)
+    course = db.get(Course, chapter.course_id)
+    subject = db.get(Subject, course.subject_id)
+    return chapter, course, subject
 
 
 def visible_course_filter(user: User | None):

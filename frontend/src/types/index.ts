@@ -132,3 +132,42 @@ export interface DashboardSummary {
   recent_progress: ProgressWithTopic[];
   bookmarks: Bookmark[];
 }
+
+export type VideoProvider = "mux" | "cloudflare_stream" | "youtube_unlisted" | "s3" | "local";
+
+export interface Video {
+  id: string;
+  provider: VideoProvider;
+  duration_seconds: number | null;
+  playback_url: string | null;
+}
+
+export type NoteBlock =
+  | { type: "heading"; text: string }
+  | { type: "paragraph"; text: string }
+  | { type: "formula"; latex: string }
+  | { type: "key_point"; text: string }
+  | { type: "example"; text: string }
+  | { type: "exam_tip"; text: string }
+  | { type: string; [key: string]: unknown };
+
+export interface Note {
+  id: string;
+  title: string;
+  content_blocks: NoteBlock[];
+  order_index: number;
+}
+
+export interface LessonBreadcrumb {
+  topic: Topic;
+  chapter: Chapter;
+  course: Course;
+  subject: Subject;
+}
+
+export interface LessonDetail extends Lesson {
+  video: Video | null;
+  notes: Note[];
+  breadcrumb: LessonBreadcrumb;
+  my_progress: Progress | null;
+}

@@ -11,6 +11,7 @@ Usage: python -m scripts.seed_content
 """
 
 from app.db.session import SessionLocal
+from app.models.content import Note, Video, VideoProvider
 from app.models.education import (
     Chapter,
     Course,
@@ -171,7 +172,7 @@ def main() -> None:
             chapter_id=algebra.id,
             defaults={"title": "Quadratic Equations", "order_index": 0},
         )
-        get_or_create(
+        lesson, _ = get_or_create(
             db,
             Lesson,
             slug="solving-quadratic-equations",
@@ -181,6 +182,40 @@ def main() -> None:
                 "lesson_type": LessonType.MIXED,
                 "order_index": 0,
                 "is_published": True,
+            },
+        )
+
+        # Public-domain/Creative-Commons sample video, used only to demonstrate the
+        # video player — not a real lesson recording.
+        get_or_create(
+            db,
+            Video,
+            lesson_id=lesson.id,
+            defaults={
+                "provider": VideoProvider.LOCAL,
+                "storage_key": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+                "duration_seconds": 596,
+            },
+        )
+
+        get_or_create(
+            db,
+            Note,
+            lesson_id=lesson.id,
+            title="Solving Quadratic Equations",
+            defaults={
+                "order_index": 0,
+                "content_blocks": [
+                    {"type": "heading", "text": "The quadratic formula"},
+                    {
+                        "type": "paragraph",
+                        "text": "Any quadratic equation in the form ax^2 + bx + c = 0 can be solved using the quadratic formula.",
+                    },
+                    {"type": "formula", "latex": "x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}"},
+                    {"type": "key_point", "text": "Always check the discriminant (b^2 - 4ac) first — if it's negative, there are no real roots."},
+                    {"type": "example", "text": "Solve x^2 - 5x + 6 = 0: factorises to (x-2)(x-3) = 0, so x = 2 or x = 3."},
+                    {"type": "exam_tip", "text": "Show your substitution into the formula for method marks, even if your final answer is wrong."},
+                ],
             },
         )
 
