@@ -290,3 +290,51 @@ export interface StudentProgressRow {
   completion_percentage: number;
   enrolled_at: string;
 }
+
+export interface PlatformStats {
+  total_users: number;
+  total_students: number;
+  total_teachers: number;
+  total_admins: number;
+  total_subjects: number;
+  total_courses: number;
+  total_published_courses: number;
+  total_lessons: number;
+  total_questions: number;
+  total_quiz_attempts: number;
+  total_discussions: number;
+  total_question_threads: number;
+  pending_reports: number;
+}
+
+export interface AdminUserRow {
+  id: string;
+  email: string;
+  role: UserRole;
+  display_name: string;
+  is_active: boolean;
+  is_verified: boolean;
+  is_verified_teacher: boolean | null;
+  created_at: string;
+}
+
+export interface TeacherRow {
+  id: string;
+  user_id: string;
+  display_name: string;
+  is_verified_teacher: boolean;
+  subjects: Subject[];
+}
+
+export type ReportStatus = "pending" | "resolved" | "dismissed";
+export type ReportTargetType = "comment" | "question_thread";
+
+export interface AdminReportRow {
+  id: string;
+  reported_by_id: string;
+  target_type: ReportTargetType;
+  target_id: string;
+  reason: string;
+  status: ReportStatus;
+  created_at: string;
+}

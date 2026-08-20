@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
+    admin,
     auth,
     comments,
     discussions,
@@ -26,3 +27,4 @@ api_router.include_router(discussions.router)
 api_router.include_router(comments.router)
 api_router.include_router(question_threads.router)
 api_router.include_router(teacher.router)
+api_router.include_router(admin.router)

@@ -62,9 +62,12 @@ export default function DashboardPage() {
           </Link>
         </div>
       ) : user.role === "admin" ? (
-        <p className="mt-8 rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
-          The admin dashboard is coming in a later milestone.
-        </p>
+        <div className="mt-8 rounded-xl border border-dashed border-slate-300 p-8 text-center">
+          <p className="text-sm text-slate-500">Manage users, teachers, and platform-wide moderation.</p>
+          <Link href="/admin" className="mt-4 inline-block">
+            <Button variant="primary">Go to admin dashboard</Button>
+          </Link>
+        </div>
       ) : summaryLoading ? (
         <p className="mt-8 text-sm text-slate-500">Loading your dashboard…</p>
       ) : (
