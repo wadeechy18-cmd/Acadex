@@ -80,6 +80,12 @@ class CourseCreate(BaseModel):
     order_index: int = 0
 
 
+class CourseUpdate(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    description: str | None = None
+    is_published: bool | None = None
+
+
 class ChapterResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -136,6 +142,11 @@ class LessonCreate(BaseModel):
     slug: str = Field(min_length=1, max_length=220)
     lesson_type: LessonType = LessonType.MIXED
     order_index: int = 0
+
+
+class LessonUpdate(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    is_published: bool | None = None
 
 
 class TopicWithLessons(TopicResponse):

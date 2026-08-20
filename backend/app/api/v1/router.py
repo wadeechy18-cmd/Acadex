@@ -11,6 +11,7 @@ from app.api.v1.endpoints import (
     practice,
     question_threads,
     quiz,
+    teacher,
 )
 
 api_router = APIRouter()
@@ -24,3 +25,4 @@ api_router.include_router(quiz.router)
 api_router.include_router(discussions.router)
 api_router.include_router(comments.router)
 api_router.include_router(question_threads.router)
+api_router.include_router(teacher.router)

@@ -54,9 +54,16 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {user.role !== "student" ? (
+      {user.role === "teacher" ? (
+        <div className="mt-8 rounded-xl border border-dashed border-slate-300 p-8 text-center">
+          <p className="text-sm text-slate-500">Manage your courses and see student progress.</p>
+          <Link href="/teacher" className="mt-4 inline-block">
+            <Button variant="primary">Go to teacher dashboard</Button>
+          </Link>
+        </div>
+      ) : user.role === "admin" ? (
         <p className="mt-8 rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
-          {user.role === "teacher" ? "The teacher dashboard is coming in a later milestone." : "The admin dashboard is coming in a later milestone."}
+          The admin dashboard is coming in a later milestone.
         </p>
       ) : summaryLoading ? (
         <p className="mt-8 text-sm text-slate-500">Loading your dashboard…</p>

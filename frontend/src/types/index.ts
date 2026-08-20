@@ -284,3 +284,9 @@ export interface QuestionThreadDetail extends QuestionThread {
   images: QuestionImage[];
   comments: Comment[];
 }
+
+export interface StudentProgressRow {
+  student: User;
+  completion_percentage: number;
+  enrolled_at: string;
+}

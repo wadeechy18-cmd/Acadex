@@ -13,6 +13,7 @@ from app.schemas.education import (
     CourseCreate,
     CourseDetail,
     CourseResponse,
+    CourseUpdate,
     EducationLevelCreate,
     EducationLevelResponse,
     ExamBoardCreate,
@@ -168,6 +169,18 @@ def create_course(
     assert_can_manage_subject(db, user, payload.subject_id)
     course = Course(**payload.model_dump())
     db.add(course)
+    db.commit()
+    db.refresh(course)
+    return course
+
+
+@router.patch("/courses/{course_id}", response_model=CourseResponse)
+def update_course(
+    course_id: uuid.UUID, payload: CourseUpdate, db: Session = Depends(get_db), user: User = Depends(require_teacher_or_admin)
+) -> Course:
+    course = assert_can_manage_course(db, user, course_id)
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(course, field, value)
     db.commit()
     db.refresh(course)
     return course

@@ -9,7 +9,7 @@ from app.models.content import Note, Video
 from app.models.education import Lesson, Topic
 from app.models.learning import Progress
 from app.models.user import User, UserRole
-from app.schemas.education import ChapterResponse, CourseResponse, SubjectResponse, TopicResponse
+from app.schemas.education import ChapterResponse, CourseResponse, LessonResponse, LessonUpdate, SubjectResponse, TopicResponse
 from app.schemas.learning import ProgressResponse
 from app.schemas.lesson import (
     LessonBreadcrumb,
@@ -118,3 +118,15 @@ def create_note(
     db.commit()
     db.refresh(note)
     return note
+
+
+@router.patch("/lessons/{lesson_id}", response_model=LessonResponse)
+def update_lesson(
+    lesson_id: uuid.UUID, payload: LessonUpdate, db: Session = Depends(get_db), user: User = Depends(require_teacher_or_admin)
+) -> Lesson:
+    lesson = assert_can_manage_lesson(db, user, lesson_id)
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(lesson, field, value)
+    db.commit()
+    db.refresh(lesson)
+    return lesson
