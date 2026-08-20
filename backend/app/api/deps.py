@@ -31,6 +31,18 @@ def get_current_user(token: str | None = Depends(oauth2_scheme), db: Session = D
     return user
 
 
+def get_current_user_optional(
+    token: str | None = Depends(oauth2_scheme), db: Session = Depends(get_db)
+) -> User | None:
+    if not token:
+        return None
+    claims = decode_token(token)
+    if not claims or claims.get("purpose") != "access":
+        return None
+    user = db.query(User).filter(User.id == uuid.UUID(claims["sub"])).first()
+    return user if user and user.is_active else None
+
+
 def require_roles(*roles: UserRole):
     def dependency(user: User = Depends(get_current_user)) -> User:
         if user.role not in roles:
