@@ -1,16 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/Button";
 import { apiFetch, ApiError } from "@/lib/api-client";
-import type { CourseDetail } from "@/types";
+import { useAuth } from "@/lib/auth-context";
+import type { CourseDetail, EnrollmentWithCourse } from "@/types";
 
 export default function CourseDetailPage() {
   const { slug } = useParams<{ slug: string }>();
+  const router = useRouter();
+  const { user } = useAuth();
   const [course, setCourse] = useState<CourseDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [enrolled, setEnrolled] = useState(false);
+  const [enrolling, setEnrolling] = useState(false);
 
   useEffect(() => {
     apiFetch<CourseDetail>(`/courses/${slug}`)
@@ -18,6 +24,28 @@ export default function CourseDetailPage() {
       .catch((err) => setError(err instanceof ApiError && err.status === 404 ? "Course not found." : "Couldn't load this course."))
       .finally(() => setLoading(false));
   }, [slug]);
+
+  useEffect(() => {
+    if (!user || user.role !== "student" || !course) return;
+    apiFetch<EnrollmentWithCourse[]>("/enrollments/me", undefined, true)
+      .then((enrollments) => setEnrolled(enrollments.some((e) => e.course_id === course.id)))
+      .catch(() => {});
+  }, [user, course]);
+
+  async function handleEnroll() {
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+    if (!course) return;
+    setEnrolling(true);
+    try {
+      await apiFetch("/enrollments", { method: "POST", body: JSON.stringify({ course_id: course.id }) }, true);
+      setEnrolled(true);
+    } finally {
+      setEnrolling(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -37,8 +65,22 @@ export default function CourseDetailPage() {
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-12">
-      <h1 className="text-3xl font-bold text-slate-900">{course.title}</h1>
-      {course.description && <p className="mt-2 text-slate-600">{course.description}</p>}
+      <div className="flex items-start justify-between gap-6">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">{course.title}</h1>
+          {course.description && <p className="mt-2 text-slate-600">{course.description}</p>}
+        </div>
+        {(!user || user.role === "student") &&
+          (enrolled ? (
+            <span className="shrink-0 rounded-full bg-green-100 px-4 py-2 text-sm font-medium text-green-800">
+              Enrolled
+            </span>
+          ) : (
+            <Button onClick={handleEnroll} disabled={enrolling} className="shrink-0">
+              {enrolling ? "Enrolling…" : "Enroll"}
+            </Button>
+          ))}
+      </div>
 
       <div className="mt-10 flex flex-col gap-6">
         {course.chapters.map((chapter, i) => (
@@ -53,10 +95,7 @@ export default function CourseDetailPage() {
                   <ul className="ml-4 mt-1 flex flex-col gap-1">
                     {topic.lessons.map((lesson) => (
                       <li key={lesson.id}>
-                        <Link
-                          href={`/lessons/${lesson.slug}`}
-                          className="text-sm text-brand-700 hover:underline"
-                        >
+                        <Link href={`/lessons/${lesson.slug}`} className="text-sm text-brand-700 hover:underline">
                           {lesson.title}
                         </Link>
                       </li>

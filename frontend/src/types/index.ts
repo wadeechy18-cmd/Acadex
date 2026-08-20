@@ -90,3 +90,45 @@ export interface Chapter {
 export interface CourseDetail extends Course {
   chapters: Chapter[];
 }
+
+export type EnrollmentStatus = "active" | "completed" | "dropped";
+
+export interface Enrollment {
+  id: string;
+  course_id: string;
+  status: EnrollmentStatus;
+  enrolled_at: string;
+}
+
+export interface EnrollmentWithCourse extends Enrollment {
+  course: Course;
+  completion_percentage: number;
+}
+
+export interface Progress {
+  id: string;
+  topic_id: string;
+  completion_percentage: number;
+  last_position_seconds: number | null;
+  completed_at: string | null;
+}
+
+export interface ProgressWithTopic extends Progress {
+  topic: Topic;
+}
+
+export type BookmarkTargetType = "lesson" | "question" | "note";
+
+export interface Bookmark {
+  id: string;
+  target_type: BookmarkTargetType;
+  target_id: string;
+  created_at: string;
+}
+
+export interface DashboardSummary {
+  my_courses: EnrollmentWithCourse[];
+  continue_learning: ProgressWithTopic | null;
+  recent_progress: ProgressWithTopic[];
+  bookmarks: Bookmark[];
+}
