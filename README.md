@@ -74,11 +74,11 @@ docs/       Architecture, database schema, milestone plan, security review
 
 ## Status
 
-Milestones 1–12 are complete: architecture, authentication, the full learning
-hierarchy (levels → exam boards → subjects → courses → chapters → topics →
-lessons), student dashboard/enrollment/progress/bookmarks, video + notes,
-practice questions + quizzes, ask-a-question + discussions, teacher and admin
-dashboards, past papers, search + notifications, and an automated test +
-security review pass. See `docs/MILESTONES.md` for what's next (deployment,
-and the future live-classes/payments/AI-tutor features the schema is already
-ready for).
+All 13 milestones are complete: architecture, authentication, the full
+learning hierarchy (levels → exam boards → subjects → courses → chapters →
+topics → lessons), student dashboard/enrollment/progress/bookmarks, video +
+notes, practice questions + quizzes, ask-a-question + discussions, teacher
+and admin dashboards, past papers, search + notifications, an automated test
++ security review pass, and a deployment runbook (`docs/DEPLOYMENT.md`). See
+`docs/MILESTONES.md` for details and the future live-classes/payments/
+AI-tutor features the schema is already ready for.
