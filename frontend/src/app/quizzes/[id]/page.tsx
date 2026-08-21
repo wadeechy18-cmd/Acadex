@@ -18,6 +18,7 @@ export default function QuizPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [started, setStarted] = useState(false);
 
   useEffect(() => {
     apiFetch<QuizDetail>(`/quizzes/${id}`)
@@ -27,22 +28,30 @@ export default function QuizPage() {
   }, [id]);
 
   async function startQuiz() {
-    const started = await apiFetch<QuizAttempt>(`/quizzes/${id}/attempts`, { method: "POST" }, true);
-    setAttempt(started);
+    if (user && user.role === "student") {
+      const attemptRes = await apiFetch<QuizAttempt>(`/quizzes/${id}/attempts`, { method: "POST" }, true);
+      setAttempt(attemptRes);
+    }
+    setStarted(true);
   }
 
   async function handleSubmit() {
-    if (!quiz || !attempt) return;
+    if (!quiz) return;
     setSubmitting(true);
     try {
       const payload = {
         answers: quiz.questions.map((q) => ({ question_id: q.id, answer: answers[q.id] ?? "" })),
       };
-      const res = await apiFetch<QuizAttemptResult>(
-        `/quiz-attempts/${attempt.id}/submit`,
-        { method: "POST", body: JSON.stringify(payload) },
-        true
-      );
+      const res = attempt
+        ? await apiFetch<QuizAttemptResult>(
+            `/quiz-attempts/${attempt.id}/submit`,
+            { method: "POST", body: JSON.stringify(payload) },
+            true
+          )
+        : await apiFetch<QuizAttemptResult>(`/quizzes/${id}/check`, {
+            method: "POST",
+            body: JSON.stringify(payload),
+          });
       setResult(res);
     } finally {
       setSubmitting(false);
@@ -98,7 +107,7 @@ export default function QuizPage() {
     );
   }
 
-  if (!attempt) {
+  if (!started) {
     return (
       <main className="mx-auto max-w-2xl px-6 py-12">
         <h1 className="text-2xl font-bold text-slate-900">{quiz.title}</h1>
@@ -106,8 +115,13 @@ export default function QuizPage() {
           {quiz.questions.length} question{quiz.questions.length !== 1 ? "s" : ""}
           {quiz.has_timer && quiz.time_limit_seconds ? ` · ${Math.round(quiz.time_limit_seconds / 60)} min` : ""}
         </p>
-        <Button className="mt-6" onClick={startQuiz} disabled={!user || user.role !== "student"}>
-          {user ? "Start quiz" : "Log in to take this quiz"}
+        {!user && (
+          <p className="mt-2 text-sm text-slate-500">
+            No account needed — take the quiz and see your score right away.
+          </p>
+        )}
+        <Button className="mt-6" onClick={startQuiz}>
+          Start quiz
         </Button>
       </main>
     );

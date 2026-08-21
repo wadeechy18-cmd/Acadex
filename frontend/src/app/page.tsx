@@ -23,19 +23,14 @@ export default function LandingPage() {
         <span className="text-xl font-bold text-brand-700">Acadex</span>
         <nav className="flex items-center gap-3">
           <Link href="/login" className="text-sm font-medium text-slate-600 hover:text-slate-900">
-            Log in
-          </Link>
-          <Link href="/register">
-            <Button variant="primary" className="text-sm">
-              Start Learning
-            </Button>
+            Teacher / admin log in
           </Link>
         </nav>
       </header>
 
       <section className="mx-auto max-w-4xl px-6 py-20 text-center">
         <span className="inline-block rounded-full bg-brand-50 px-4 py-1 text-sm font-medium text-brand-700">
-          100% free while we build
+          100% free — no sign-up needed
         </span>
         <h1 className="mt-6 text-5xl font-extrabold tracking-tight text-slate-900">
           Learn. Practice. Ask. Improve.
@@ -44,13 +39,11 @@ export default function LandingPage() {
           Video lessons, notes, practice questions, quizzes, past papers, and a
           community of students and teachers — everything you need for GCSE,
           International A-Level, and first-year Computer Science, in one place.
+          Come learn, no account required.
         </p>
         <div className="mt-8 flex justify-center gap-3">
-          <Link href="/register">
-            <Button variant="primary">Start Learning</Button>
-          </Link>
           <Link href="/subjects">
-            <Button variant="secondary">Explore Subjects</Button>
+            <Button variant="primary">Explore Subjects</Button>
           </Link>
         </div>
       </section>

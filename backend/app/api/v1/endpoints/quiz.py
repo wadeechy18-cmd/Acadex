@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -19,7 +20,7 @@ from app.schemas.quiz import (
     QuizSubmission,
 )
 from app.services.education_service import assert_can_manage_chapter, assert_can_manage_topic
-from app.services.quiz_service import resolve_correct_answer_display, start_attempt, submit_attempt
+from app.services.quiz_service import grade_quiz_answers, resolve_correct_answer_display, start_attempt, submit_attempt
 
 router = APIRouter(tags=["quiz"])
 
@@ -56,6 +57,44 @@ def get_quiz(quiz_id: uuid.UUID, db: Session = Depends(get_db)) -> QuizDetail:
         time_limit_seconds=quiz.time_limit_seconds,
         is_published=quiz.is_published,
         questions=[QuestionSafe.model_validate(q) for q in questions if q],
+    )
+
+
+@router.post("/quizzes/{quiz_id}/check", response_model=QuizAttemptResult)
+def check_quiz(quiz_id: uuid.UUID, payload: QuizSubmission, db: Session = Depends(get_db)) -> QuizAttemptResult:
+    """Grades a quiz instantly with no login and nothing persisted — lets
+    anyone take a quiz and see their score without an account.
+    """
+    quiz = db.query(Quiz).filter_by(id=quiz_id, is_published=True).first()
+    if not quiz:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Quiz not found.")
+
+    graded, marks_earned, total_marks_available = grade_quiz_answers(
+        db, quiz_id, [(a.question_id, a.answer) for a in payload.answers]
+    )
+
+    results = []
+    for question_id, student_answer, is_correct in graded:
+        question = db.get(Question, question_id)
+        results.append(
+            QuizAnswerResult(
+                question_id=question_id,
+                student_answer=student_answer,
+                is_correct=is_correct,
+                correct_answer=resolve_correct_answer_display(db, question) if question else None,
+                explanation=question.explanation if question else None,
+            )
+        )
+
+    now = datetime.now(timezone.utc)
+    return QuizAttemptResult(
+        id=uuid.uuid4(),
+        quiz_id=quiz_id,
+        started_at=now,
+        submitted_at=now,
+        score=marks_earned,
+        percentage=round((marks_earned / total_marks_available) * 100, 1) if total_marks_available else 0.0,
+        answers=results,
     )
 
 

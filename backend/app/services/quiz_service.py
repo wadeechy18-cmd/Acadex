@@ -38,6 +38,48 @@ def resolve_correct_answer_display(db: Session, question: Question) -> str | Non
     return question.correct_answer
 
 
+def grade_quiz_answers(
+    db: Session, quiz_id: uuid.UUID, answers: list[tuple[uuid.UUID, str]]
+) -> tuple[list[tuple[uuid.UUID, str, bool | None]], float, int]:
+    """Marks a set of submitted answers against a quiz's questions without
+    writing anything to the database. Returns (graded answers, marks earned,
+    total marks available) so callers can either persist the result (a
+    logged-in student's attempt) or just hand it back (anonymous practice).
+    """
+    quiz_question_rows = db.query(QuizQuestion).filter_by(quiz_id=quiz_id).all()
+    marks_by_question = {qq.question_id: (qq.marks_override or None) for qq in quiz_question_rows}
+    valid_question_ids = set(marks_by_question.keys())
+
+    graded: list[tuple[uuid.UUID, str, bool | None]] = []
+    total_marks_available = 0
+    marks_earned = 0.0
+    answered_ids: set[uuid.UUID] = set()
+
+    for question_id, student_answer in answers:
+        if question_id not in valid_question_ids:
+            continue
+        question = db.get(Question, question_id)
+        if not question:
+            continue
+
+        answered_ids.add(question_id)
+        is_correct = mark_answer(db, question, student_answer)
+        graded.append((question_id, student_answer, is_correct))
+
+        question_marks = marks_by_question[question_id] or question.marks
+        total_marks_available += question_marks
+        if is_correct:
+            marks_earned += question_marks
+
+    # Count marks for any questions in the quiz left unanswered.
+    for question_id in valid_question_ids - answered_ids:
+        question = db.get(Question, question_id)
+        if question:
+            total_marks_available += marks_by_question[question_id] or question.marks
+
+    return graded, marks_earned, total_marks_available
+
+
 def start_attempt(db: Session, student_id: uuid.UUID, quiz_id: uuid.UUID) -> QuizAttempt:
     quiz = db.get(Quiz, quiz_id)
     if not quiz or not quiz.is_published:
@@ -59,21 +101,8 @@ def submit_attempt(
     if attempt.submitted_at is not None:
         raise HTTPException(status.HTTP_409_CONFLICT, "This attempt has already been submitted.")
 
-    quiz_question_rows = db.query(QuizQuestion).filter_by(quiz_id=attempt.quiz_id).all()
-    marks_by_question = {qq.question_id: (qq.marks_override or None) for qq in quiz_question_rows}
-    valid_question_ids = set(marks_by_question.keys())
-
-    total_marks_available = 0
-    marks_earned = 0.0
-
-    for question_id, student_answer in answers:
-        if question_id not in valid_question_ids:
-            continue
-        question = db.get(Question, question_id)
-        if not question:
-            continue
-
-        is_correct = mark_answer(db, question, student_answer)
+    graded, marks_earned, total_marks_available = grade_quiz_answers(db, attempt.quiz_id, answers)
+    for question_id, student_answer, is_correct in graded:
         db.add(
             QuizAnswer(
                 attempt_id=attempt.id,
@@ -82,18 +111,6 @@ def submit_attempt(
                 is_correct=is_correct,
             )
         )
-
-        question_marks = marks_by_question[question_id] or question.marks
-        total_marks_available += question_marks
-        if is_correct:
-            marks_earned += question_marks
-
-    # Count marks for any questions in the quiz that the student left unanswered.
-    answered_ids = {q_id for q_id, _ in answers}
-    for question_id in valid_question_ids - answered_ids:
-        question = db.get(Question, question_id)
-        if question:
-            total_marks_available += marks_by_question[question_id] or question.marks
 
     attempt.submitted_at = datetime.now(timezone.utc)
     attempt.score = marks_earned
