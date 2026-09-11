@@ -9,6 +9,7 @@ from app.api.v1.endpoints import (
     education,
     health,
     learning,
+    lesson_plans,
     lessons,
     notifications,
     organizations,
@@ -38,3 +39,4 @@ api_router.include_router(search.router)
 api_router.include_router(notifications.router)
 api_router.include_router(organizations.router)
 api_router.include_router(classes.router)
+api_router.include_router(lesson_plans.router)

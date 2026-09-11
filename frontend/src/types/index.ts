@@ -450,3 +450,77 @@ export interface TeachingClass {
   qualification: string | null;
   exam_board_name: string | null;
 }
+
+export type LessonPlanTemplateType =
+  | "standard"
+  | "practical"
+  | "revision"
+  | "exam_prep"
+  | "new_topic"
+  | "retrieval"
+  | "assessment"
+  | "review"
+  | "double"
+  | "short";
+
+export type LessonPlanStatus = "draft" | "published";
+
+export interface LessonPlan {
+  id: string;
+  organization_id: string;
+  class_id: string;
+  teacher_user_id: string;
+  title: string;
+  topic: string;
+  duration_minutes: number;
+  template_type: LessonPlanTemplateType;
+  status: LessonPlanStatus;
+  created_at: string;
+  updated_at: string;
+  latest_version_number: number;
+}
+
+export interface ContentBlock {
+  type: "paragraph" | "activity_instruction";
+  text: string;
+}
+
+export interface DifferentiationNotes {
+  support?: string | null;
+  core?: string | null;
+  challenge?: string | null;
+  send_notes?: string | null;
+  eal_notes?: string | null;
+}
+
+export interface LessonSection {
+  id: string;
+  type: string;
+  title: string;
+  duration_minutes: number;
+  body: ContentBlock[];
+}
+
+export interface LessonPlanContent {
+  learning_objectives: string[];
+  success_criteria: string[];
+  prior_knowledge: string[];
+  key_vocabulary: string[];
+  sections: LessonSection[];
+  differentiation: DifferentiationNotes | null;
+  assessment_for_learning: string[];
+  misconceptions: string[];
+  teacher_notes: string | null;
+  safeguarding_note: string | null;
+}
+
+export interface LessonPlanDetail extends LessonPlan {
+  content: LessonPlanContent;
+}
+
+export interface LessonPlanVersionSummary {
+  id: string;
+  version_number: number;
+  created_by_user_id: string | null;
+  created_at: string;
+}

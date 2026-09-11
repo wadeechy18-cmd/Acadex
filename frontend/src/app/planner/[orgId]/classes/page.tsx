@@ -121,14 +121,14 @@ export default function ClassesPage() {
         <div className="mt-8 flex flex-col gap-3">
           {classes.map((c) => (
             <div key={c.id} className="flex items-center justify-between rounded-xl border border-slate-200 p-5">
-              <div>
-                <h2 className="font-semibold text-slate-900">{c.name}</h2>
+              <Link href={`/planner/${orgId}/classes/${c.id}/lesson-plans`} className="flex-1">
+                <h2 className="font-semibold text-slate-900 hover:text-brand-700">{c.name}</h2>
                 <p className="mt-1 text-sm text-slate-500">
                   {c.subject_name} · {c.key_stage} · {YEAR_GROUP_OPTIONS.find((y) => y.value === c.year_group)?.label}
                   {c.qualification ? ` · ${c.qualification}` : ""}
                   {c.exam_board_name ? ` · ${c.exam_board_name}` : ""}
                 </p>
-              </div>
+              </Link>
               {c.teacher_user_id === user.id && (
                 <Button variant="secondary" className="text-sm" onClick={() => handleDelete(c.id)}>
                   Delete

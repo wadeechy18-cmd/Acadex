@@ -12,6 +12,7 @@ from app.models.billing import Entitlement, Payment, Purchase, Subscription
 from app.models.ai import AIConversation, AIMessage
 from app.models.organization import Organization, OrganizationMember, OrganizationKind, OrganizationRole
 from app.models.planner_class import TeachingClass, YearGroup
+from app.models.lesson_plan import LessonPlan, LessonPlanVersion, LessonPlanStatus, LessonPlanTemplateType
 
 __all__ = [
     "User",
@@ -65,4 +66,8 @@ __all__ = [
     "OrganizationRole",
     "TeachingClass",
     "YearGroup",
+    "LessonPlan",
+    "LessonPlanVersion",
+    "LessonPlanStatus",
+    "LessonPlanTemplateType",
 ]
