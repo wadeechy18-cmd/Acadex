@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from app.api.v1.endpoints import (
     admin,
     auth,
+    classes,
     comments,
     discussions,
     education,
@@ -36,3 +37,4 @@ api_router.include_router(pastpapers.router)
 api_router.include_router(search.router)
 api_router.include_router(notifications.router)
 api_router.include_router(organizations.router)
+api_router.include_router(classes.router)

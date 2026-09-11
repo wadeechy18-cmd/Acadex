@@ -421,3 +421,32 @@ export interface OrganizationMember {
   role: OrganizationRole;
   joined_at: string;
 }
+
+export type YearGroup =
+  | "nursery"
+  | "reception"
+  | "year_1"
+  | "year_2"
+  | "year_3"
+  | "year_4"
+  | "year_5"
+  | "year_6"
+  | "year_7"
+  | "year_8"
+  | "year_9"
+  | "year_10"
+  | "year_11"
+  | "year_12"
+  | "year_13";
+
+export interface TeachingClass {
+  id: string;
+  organization_id: string;
+  teacher_user_id: string;
+  name: string;
+  subject_name: string;
+  year_group: YearGroup;
+  key_stage: string;
+  qualification: string | null;
+  exam_board_name: string | null;
+}

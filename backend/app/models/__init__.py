@@ -11,6 +11,7 @@ from app.models.live_class import LiveClass, LiveClassEnrollment, LiveClassRecor
 from app.models.billing import Entitlement, Payment, Purchase, Subscription
 from app.models.ai import AIConversation, AIMessage
 from app.models.organization import Organization, OrganizationMember, OrganizationKind, OrganizationRole
+from app.models.planner_class import TeachingClass, YearGroup
 
 __all__ = [
     "User",
@@ -62,4 +63,6 @@ __all__ = [
     "OrganizationMember",
     "OrganizationKind",
     "OrganizationRole",
+    "TeachingClass",
+    "YearGroup",
 ]

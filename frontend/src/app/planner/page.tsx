@@ -54,9 +54,10 @@ export default function PlannerWorkspacesPage() {
       {!dataLoading && !error && (
         <div className="mt-8 flex flex-col gap-3">
           {organizations.map((org) => (
-            <div
+            <Link
               key={org.id}
-              className="flex items-center justify-between rounded-xl border border-slate-200 p-5"
+              href={`/planner/${org.id}/classes`}
+              className="flex items-center justify-between rounded-xl border border-slate-200 p-5 transition-colors hover:border-brand-300 hover:bg-brand-50"
             >
               <div>
                 <h2 className="font-semibold text-slate-900">{org.name}</h2>
@@ -67,14 +68,13 @@ export default function PlannerWorkspacesPage() {
               <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium capitalize text-slate-600">
                 {org.kind}
               </span>
-            </div>
+            </Link>
           ))}
         </div>
       )}
 
       <p className="mt-10 rounded-xl border border-dashed border-slate-300 p-6 text-sm text-slate-500">
-        Lesson planning, classes, and weekly schedules land here in upcoming phases. This page currently confirms
-        workspace membership only.
+        Click a workspace to manage its classes. Lesson planning and weekly schedules land here in upcoming phases.
       </p>
     </main>
   );
