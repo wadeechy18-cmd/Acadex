@@ -17,6 +17,7 @@ from app.api.v1.endpoints import (
     practice,
     question_threads,
     quiz,
+    resources,
     search,
     teacher,
 )
@@ -40,3 +41,4 @@ api_router.include_router(notifications.router)
 api_router.include_router(organizations.router)
 api_router.include_router(classes.router)
 api_router.include_router(lesson_plans.router)
+api_router.include_router(resources.router)

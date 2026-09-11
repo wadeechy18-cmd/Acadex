@@ -16,7 +16,11 @@ from pathlib import Path
 from app.core.config import get_settings
 
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
-ALLOWED_DOCUMENT_TYPES = {"application/pdf"}
+ALLOWED_DOCUMENT_TYPES = {
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",  # .docx
+    "text/plain",
+}
 ALLOWED_VIDEO_TYPES = {"video/mp4", "video/webm"}
 
 MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024

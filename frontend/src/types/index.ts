@@ -550,3 +550,37 @@ export interface LessonPlanQualityReport {
   timing: TimingCheck;
   issues: QualityIssue[];
 }
+
+export type ResourceType =
+  | "exam_specification"
+  | "scheme_of_work"
+  | "teacher_notes"
+  | "lesson_resource"
+  | "worksheet"
+  | "past_paper"
+  | "mark_scheme"
+  | "practical_guide"
+  | "curriculum_document"
+  | "other";
+
+export type ResourceVisibility = "private" | "organization";
+export type ExtractionStatus = "pending" | "completed" | "failed";
+
+export interface Resource {
+  id: string;
+  organization_id: string;
+  uploaded_by_user_id: string;
+  file_name: string;
+  resource_type: ResourceType;
+  visibility: ResourceVisibility;
+  subject_name: string | null;
+  exam_board_name: string | null;
+  qualification: string | null;
+  year_group: YearGroup | null;
+  topic: string | null;
+  unit: string | null;
+  source: string | null;
+  extraction_status: ExtractionStatus;
+  extraction_error: string | null;
+  created_at: string;
+}

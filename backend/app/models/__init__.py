@@ -13,6 +13,7 @@ from app.models.ai import AIConversation, AIMessage
 from app.models.organization import Organization, OrganizationMember, OrganizationKind, OrganizationRole
 from app.models.planner_class import TeachingClass, YearGroup
 from app.models.lesson_plan import LessonPlan, LessonPlanVersion, LessonPlanStatus, LessonPlanTemplateType
+from app.models.resource import Resource, ResourceChunk, ResourceType, ResourceVisibility, ExtractionStatus
 
 __all__ = [
     "User",
@@ -70,4 +71,9 @@ __all__ = [
     "LessonPlanVersion",
     "LessonPlanStatus",
     "LessonPlanTemplateType",
+    "Resource",
+    "ResourceChunk",
+    "ResourceType",
+    "ResourceVisibility",
+    "ExtractionStatus",
 ]

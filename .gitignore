@@ -26,3 +26,6 @@ build/
 # DB
 *.sqlite3
 postgres-data/
+
+# Local file storage (StorageBackend local dev target -- runtime data, never committed)
+backend/uploads/
