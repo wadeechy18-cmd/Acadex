@@ -1,0 +1,165 @@
+{
+  "stage": {
+    "id": "eyfs",
+    "name": "Early Years Foundation Stage (Reception)",
+    "age_range": "4-5",
+    "framework_ref": "Statutory Framework for EYFS, DfE 2021 (effective 2021+)",
+    "areas_of_learning": [
+      {
+        "id": "PSED",
+        "name": "Personal, Social and Emotional Development",
+        "type": "prime",
+        "early_learning_goals": [
+          {"elg_id": "PSED.1", "title": "Self-Regulation", "description": "Shows an understanding of own feelings, regulates behaviour accordingly, sets and works towards simple goals, waits for what they want, controls immediate impulses when appropriate"},
+          {"elg_id": "PSED.2", "title": "Managing Self", "description": "Manages own basic hygiene and personal needs, is confident to try new activities, explains why rules are important, manages own feelings and behaviour"},
+          {"elg_id": "PSED.3", "title": "Building Relationships", "description": "Works and plays cooperatively, forms positive relationships with adults and peers, shows sensitivity to others' needs and feelings"}
+        ]
+      },
+      {
+        "id": "CL",
+        "name": "Communication and Language",
+        "type": "prime",
+        "early_learning_goals": [
+          {"elg_id": "CL.1", "title": "Listening, Attention and Understanding", "description": "Listens attentively, responds appropriately, follows instructions with several steps, answers 'how' and 'why' questions"},
+          {"elg_id": "CL.2", "title": "Speaking", "description": "Expresses ideas using full sentences, uses new vocabulary, retells narratives, offers explanations for why things happen"}
+        ]
+      },
+      {
+        "id": "PD",
+        "name": "Physical Development",
+        "type": "prime",
+        "early_learning_goals": [
+          {"elg_id": "PD.1", "title": "Gross Motor Skills", "description": "Negotiates space and obstacles safely, demonstrates strength/balance/coordination, moves confidently in a range of ways"},
+          {"elg_id": "PD.2", "title": "Fine Motor Skills", "description": "Holds a pencil effectively, uses a range of small tools, shows good control when writing/drawing"}
+        ]
+      },
+      {
+        "id": "LIT",
+        "name": "Literacy",
+        "type": "specific",
+        "early_learning_goals": [
+          {"elg_id": "LIT.1", "title": "Comprehension", "description": "Demonstrates understanding of stories through discussion, anticipates key events, uses new vocabulary in different contexts"},
+          {"elg_id": "LIT.2", "title": "Word Reading", "description": "Says sounds for graphemes, reads simple sentences and phonically decodable words accurately"},
+          {"elg_id": "LIT.3", "title": "Writing", "description": "Writes recognisable letters, spells words by identifying sounds, writes simple phrases/sentences that can be read by others"}
+        ]
+      },
+      {
+        "id": "MATHS",
+        "name": "Mathematics",
+        "type": "specific",
+        "early_learning_goals": [
+          {"elg_id": "MATHS.1", "title": "Number", "description": "Counts reliably to 20, recalls number bonds to 5 (and some to 10), subitises small quantities"},
+          {"elg_id": "MATHS.2", "title": "Numerical Patterns", "description": "Compares quantities, explores odd/even, doubling and sharing, continues/creates patterns"}
+        ]
+      },
+      {
+        "id": "UTW",
+        "name": "Understanding the World",
+        "type": "specific",
+        "early_learning_goals": [
+          {"elg_id": "UTW.1", "title": "Past and Present", "description": "Talks about past/present events in own life and family, compares characters from stories"},
+          {"elg_id": "UTW.2", "title": "People, Culture and Communities", "description": "Describes own immediate environment, knows some similarities/differences between communities and traditions"},
+          {"elg_id": "UTW.3", "title": "The Natural World", "description": "Explores the natural world, makes observations of plants/animals, understands seasonal change"}
+        ]
+      },
+      {
+        "id": "EAD",
+        "name": "Expressive Arts and Design",
+        "type": "specific",
+        "early_learning_goals": [
+          {"elg_id": "EAD.1", "title": "Creating with Materials", "description": "Safely uses tools/materials, joins materials, shares creations, uses colour purposefully"},
+          {"elg_id": "EAD.2", "title": "Being Imaginative and Expressive", "description": "Invents/adapts songs, performs songs/rhymes/stories, plays imaginatively with role-play and small-world"}
+        ]
+      }
+    ]
+  },
+
+  "half_terms": [
+    {
+      "id": "autumn_1",
+      "label": "Autumn 1",
+      "weeks": 7,
+      "theme": "All About Me / Marvellous Me",
+      "weekly_themes": [
+        {"week_number": 1, "sub_theme": "Starting School / My Feelings", "areas_covered": ["PSED","CL","PD","LIT","MATHS","UTW","EAD"]},
+        {"week_number": 2, "sub_theme": "My Body and Senses", "areas_covered": ["PSED","CL","PD","LIT","MATHS","UTW","EAD"]},
+        {"week_number": 3, "sub_theme": "My Family", "areas_covered": ["PSED","CL","PD","LIT","MATHS","UTW","EAD"]},
+        {"week_number": 4, "sub_theme": "My Home", "areas_covered": ["PSED","CL","PD","LIT","MATHS","UTW","EAD"]},
+        {"week_number": 5, "sub_theme": "Healthy Me (Food & Exercise)", "areas_covered": ["PSED","CL","PD","LIT","MATHS","UTW","EAD"]},
+        {"week_number": 6, "sub_theme": "People Who Help Us at School", "areas_covered": ["PSED","CL","PD","LIT","MATHS","UTW","EAD"]},
+        {"week_number": 7, "sub_theme": "Harvest / Autumn Changes", "areas_covered": ["PSED","CL","PD","LIT","MATHS","UTW","EAD"]}
+      ]
+    },
+    {
+      "id": "autumn_2",
+      "label": "Autumn 2",
+      "weeks": 7,
+      "theme": "Celebrations and Traditional Tales",
+      "weekly_themes": [
+        {"week_number": 8, "sub_theme": "Traditional Tales: The Three Little Pigs", "areas_covered": ["LIT","MATHS","EAD","UTW"]},
+        {"week_number": 9, "sub_theme": "Traditional Tales: Goldilocks", "areas_covered": ["LIT","MATHS","EAD","UTW"]},
+        {"week_number": 10, "sub_theme": "Bonfire Night / Fireworks", "areas_covered": ["UTW","EAD","LIT","MATHS"]},
+        {"week_number": 11, "sub_theme": "Diwali", "areas_covered": ["UTW","EAD","LIT","PSED"]},
+        {"week_number": 12, "sub_theme": "Nocturnal Animals / Owls", "areas_covered": ["UTW","LIT","MATHS","EAD"]},
+        {"week_number": 13, "sub_theme": "Christmas Traditions", "areas_covered": ["UTW","EAD","LIT","MATHS"]},
+        {"week_number": 14, "sub_theme": "Christmas Performance / Nativity", "areas_covered": ["EAD","CL","PSED"]}
+      ]
+    },
+    {
+      "id": "spring_1",
+      "label": "Spring 1",
+      "weeks": 6,
+      "theme": "Winter and Growing",
+      "weekly_themes": [
+        {"week_number": 15, "sub_theme": "New Year / New Beginnings", "areas_covered": ["PSED","CL","LIT","MATHS"]},
+        {"week_number": 16, "sub_theme": "Winter Weather", "areas_covered": ["UTW","LIT","MATHS","EAD"]},
+        {"week_number": 17, "sub_theme": "Arctic Animals", "areas_covered": ["UTW","LIT","MATHS","EAD"]},
+        {"week_number": 18, "sub_theme": "Chinese New Year", "areas_covered": ["UTW","EAD","LIT"]},
+        {"week_number": 19, "sub_theme": "Space and Rockets", "areas_covered": ["UTW","LIT","MATHS","EAD"]},
+        {"week_number": 20, "sub_theme": "Dinosaurs", "areas_covered": ["UTW","LIT","MATHS","EAD"]}
+      ]
+    },
+    {
+      "id": "spring_2",
+      "label": "Spring 2",
+      "weeks": 6,
+      "theme": "People Who Help Us / Journeys",
+      "weekly_themes": [
+        {"week_number": 21, "sub_theme": "People Who Help Us: Emergency Services", "areas_covered": ["UTW","CL","LIT","MATHS"]},
+        {"week_number": 22, "sub_theme": "Transport and Journeys", "areas_covered": ["UTW","LIT","MATHS","EAD"]},
+        {"week_number": 23, "sub_theme": "Easter Traditions", "areas_covered": ["UTW","EAD","LIT"]},
+        {"week_number": 24, "sub_theme": "Life Cycles: Chick and Egg", "areas_covered": ["UTW","LIT","MATHS"]},
+        {"week_number": 25, "sub_theme": "Farm Animals", "areas_covered": ["UTW","LIT","MATHS","EAD"]},
+        {"week_number": 26, "sub_theme": "Spring Changes / Planting", "areas_covered": ["UTW","LIT","MATHS","EAD"]}
+      ]
+    },
+    {
+      "id": "summer_1",
+      "label": "Summer 1",
+      "weeks": 6,
+      "theme": "Minibeasts and Growth",
+      "weekly_themes": [
+        {"week_number": 27, "sub_theme": "Minibeasts", "areas_covered": ["UTW","LIT","MATHS","EAD"]},
+        {"week_number": 28, "sub_theme": "The Very Hungry Caterpillar / Life Cycles", "areas_covered": ["LIT","UTW","MATHS"]},
+        {"week_number": 29, "sub_theme": "Growing Plants", "areas_covered": ["UTW","LIT","MATHS"]},
+        {"week_number": 30, "sub_theme": "Weather and Seasons Recap", "areas_covered": ["UTW","LIT","MATHS"]},
+        {"week_number": 31, "sub_theme": "People and Places Around the World", "areas_covered": ["UTW","LIT","EAD"]},
+        {"week_number": 32, "sub_theme": "Growing and Change (Me as a Baby to Now)", "areas_covered": ["PSED","UTW","LIT"]}
+      ]
+    },
+    {
+      "id": "summer_2",
+      "label": "Summer 2",
+      "weeks": 6,
+      "theme": "Under the Sea / Moving to Year 1",
+      "weekly_themes": [
+        {"week_number": 33, "sub_theme": "Under the Sea", "areas_covered": ["UTW","LIT","MATHS","EAD"]},
+        {"week_number": 34, "sub_theme": "Pirates and Maps", "areas_covered": ["LIT","MATHS","UTW","EAD"]},
+        {"week_number": 35, "sub_theme": "Seaside Holidays", "areas_covered": ["UTW","LIT","MATHS"]},
+        {"week_number": 36, "sub_theme": "Superheroes / Being Brave for Year 1", "areas_covered": ["PSED","CL","LIT"]},
+        {"week_number": 37, "sub_theme": "Transition to Year 1", "areas_covered": ["PSED","CL","LIT","MATHS"]},
+        {"week_number": 38, "sub_theme": "Celebrating the Year / Sports Day", "areas_covered": ["PD","PSED","EAD"]}
+      ]
+    }
+  ]
+}

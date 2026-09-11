@@ -1,0 +1,90 @@
+{
+  "terms": [
+    {
+      "id": "y2_autumn_1",
+      "label": "Year 2 Autumn 1",
+      "weeks": 7,
+      "theme": "Local History and Living Things",
+      "weekly_themes": [
+        {"week_number": 1, "sub_theme": "Settling into Year 2 / My New Class", "subjects_covered": ["ENG","MATHS","SCI","ART"]},
+        {"week_number": 2, "sub_theme": "Our Local Area", "subjects_covered": ["ENG","MATHS","GEOG","HIST"]},
+        {"week_number": 3, "sub_theme": "Our Local Area: Then and Now", "subjects_covered": ["ENG","MATHS","HIST","GEOG"]},
+        {"week_number": 4, "sub_theme": "Living, Dead, or Never Alive?", "subjects_covered": ["ENG","MATHS","SCI"]},
+        {"week_number": 5, "sub_theme": "Habitats Near Us", "subjects_covered": ["ENG","MATHS","SCI"]},
+        {"week_number": 6, "sub_theme": "Microhabitats and Minibeasts", "subjects_covered": ["ENG","MATHS","SCI","ART"]},
+        {"week_number": 7, "sub_theme": "Food Chains", "subjects_covered": ["ENG","MATHS","SCI"]}
+      ]
+    },
+    {
+      "id": "y2_autumn_2",
+      "label": "Year 2 Autumn 2",
+      "weeks": 7,
+      "theme": "Significant Individuals: Nightingale and Seacole",
+      "weekly_themes": [
+        {"week_number": 8, "sub_theme": "Who Was Florence Nightingale?", "subjects_covered": ["ENG","MATHS","HIST"]},
+        {"week_number": 9, "sub_theme": "Who Was Mary Seacole?", "subjects_covered": ["ENG","MATHS","HIST"]},
+        {"week_number": 10, "sub_theme": "Comparing Two Significant Nurses", "subjects_covered": ["ENG","MATHS","HIST"]},
+        {"week_number": 11, "sub_theme": "Bonfire Night and Remembrance", "subjects_covered": ["ENG","MATHS","HIST","ART"]},
+        {"week_number": 12, "sub_theme": "Autumn Changes and Materials", "subjects_covered": ["ENG","MATHS","SCI"]},
+        {"week_number": 13, "sub_theme": "Christmas Around the World", "subjects_covered": ["ENG","MATHS","GEOG","ART"]},
+        {"week_number": 14, "sub_theme": "Christmas Performance and Celebration", "subjects_covered": ["ENG","MATHS","ART"]}
+      ]
+    },
+    {
+      "id": "y2_spring_1",
+      "label": "Year 2 Spring 1",
+      "weeks": 6,
+      "theme": "Materials and a Contrasting Locality",
+      "weekly_themes": [
+        {"week_number": 15, "sub_theme": "New Year: Number Recap", "subjects_covered": ["ENG","MATHS"]},
+        {"week_number": 16, "sub_theme": "Uses of Everyday Materials", "subjects_covered": ["ENG","MATHS","SCI"]},
+        {"week_number": 17, "sub_theme": "Changing Shapes of Materials", "subjects_covered": ["ENG","MATHS","SCI"]},
+        {"week_number": 18, "sub_theme": "A Village Far Away: Introducing Our Contrasting Locality", "subjects_covered": ["ENG","MATHS","GEOG"]},
+        {"week_number": 19, "sub_theme": "Comparing Our Locality to Chembakolli (India)", "subjects_covered": ["ENG","MATHS","GEOG"]},
+        {"week_number": 20, "sub_theme": "Winter Weather Around the World", "subjects_covered": ["ENG","MATHS","GEOG","SCI"]}
+      ]
+    },
+    {
+      "id": "y2_spring_2",
+      "label": "Year 2 Spring 2",
+      "weeks": 6,
+      "theme": "Animals, Health and Flight",
+      "weekly_themes": [
+        {"week_number": 21, "sub_theme": "Animal Offspring and Life Cycles", "subjects_covered": ["ENG","MATHS","SCI"]},
+        {"week_number": 22, "sub_theme": "Healthy Eating and Exercise", "subjects_covered": ["ENG","MATHS","SCI"]},
+        {"week_number": 23, "sub_theme": "Hygiene and Staying Well", "subjects_covered": ["ENG","MATHS","SCI"]},
+        {"week_number": 24, "sub_theme": "The Wright Brothers and the History of Flight", "subjects_covered": ["ENG","MATHS","HIST"]},
+        {"week_number": 25, "sub_theme": "Easter Traditions", "subjects_covered": ["ENG","MATHS","ART"]},
+        {"week_number": 26, "sub_theme": "Spring Changes and Plant Growth", "subjects_covered": ["ENG","MATHS","SCI"]}
+      ]
+    },
+    {
+      "id": "y2_summer_1",
+      "label": "Year 2 Summer 1",
+      "weeks": 6,
+      "theme": "Plants and Picasso",
+      "weekly_themes": [
+        {"week_number": 27, "sub_theme": "What Plants Need to Grow and Stay Healthy", "subjects_covered": ["ENG","MATHS","SCI"]},
+        {"week_number": 28, "sub_theme": "Growing and Recording Our Plants", "subjects_covered": ["ENG","MATHS","SCI"]},
+        {"week_number": 29, "sub_theme": "Studying Pablo Picasso", "subjects_covered": ["ENG","MATHS","ART"]},
+        {"week_number": 30, "sub_theme": "Studying Wassily Kandinsky", "subjects_covered": ["ENG","MATHS","ART"]},
+        {"week_number": 31, "sub_theme": "Maps, Atlases and Aerial Photographs", "subjects_covered": ["ENG","MATHS","GEOG"]},
+        {"week_number": 32, "sub_theme": "Compass Directions and Our School Grounds", "subjects_covered": ["ENG","MATHS","GEOG"]}
+      ]
+    },
+    {
+      "id": "y2_summer_2",
+      "label": "Year 2 Summer 2",
+      "weeks": 6,
+      "theme": "Money, Measures and Moving to Year 3",
+      "weekly_themes": [
+        {"week_number": 33, "sub_theme": "Money: Coins and Notes", "subjects_covered": ["ENG","MATHS"]},
+        {"week_number": 34, "sub_theme": "Money: Giving Change", "subjects_covered": ["ENG","MATHS"]},
+        {"week_number": 35, "sub_theme": "Telling Time to 5 Minutes", "subjects_covered": ["ENG","MATHS"]},
+        {"week_number": 36, "sub_theme": "Multiplication and Division Recap (2, 5, 10 Times Tables)", "subjects_covered": ["ENG","MATHS"]},
+        {"week_number": 37, "sub_theme": "Transition to Year 3", "subjects_covered": ["ENG","MATHS"]},
+        {"week_number": 38, "sub_theme": "Celebrating the Year / Sports Day", "subjects_covered": ["ENG","MATHS","ART"]}
+      ]
+    }
+  ]
+}

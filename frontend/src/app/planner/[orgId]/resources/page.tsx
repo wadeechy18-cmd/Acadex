@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { apiFetch, ApiError } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
-import type { Resource, ResourceType, ResourceVisibility, YearGroup } from "@/types";
+import type { CurriculumPackStatus, Resource, ResourceType, ResourceVisibility, YearGroup } from "@/types";
 
 const RESOURCE_TYPE_OPTIONS: { value: ResourceType; label: string }[] = [
   { value: "exam_specification", label: "Exam Specification" },
@@ -63,6 +63,10 @@ export default function ResourcesPage() {
   const [filterSubject, setFilterSubject] = useState("");
   const [filterYearGroup, setFilterYearGroup] = useState<YearGroup | "">("");
 
+  const [curriculumPacks, setCurriculumPacks] = useState<CurriculumPackStatus[]>([]);
+  const [importingPackId, setImportingPackId] = useState<string | null>(null);
+  const [packError, setPackError] = useState<string | null>(null);
+
   useEffect(() => {
     if (!loading && (!user || user.role !== "teacher")) {
       router.replace("/dashboard");
@@ -86,6 +90,34 @@ export default function ResourcesPage() {
     loadResources();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, orgId, filterSubject, filterYearGroup]);
+
+  function loadCurriculumPacks() {
+    apiFetch<CurriculumPackStatus[]>(`/organizations/${orgId}/curriculum-packs`, undefined, true)
+      .then(setCurriculumPacks)
+      .catch(() => {
+        // Non-critical -- the resource library still works without this section.
+      });
+  }
+
+  useEffect(() => {
+    if (!user || user.role !== "teacher" || !orgId) return;
+    loadCurriculumPacks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, orgId]);
+
+  async function handleImportPack(packId: string) {
+    setPackError(null);
+    setImportingPackId(packId);
+    try {
+      await apiFetch(`/organizations/${orgId}/curriculum-packs/${packId}/import`, { method: "POST" }, true);
+      loadCurriculumPacks();
+      loadResources();
+    } catch (err) {
+      setPackError(err instanceof ApiError ? err.message : "Couldn't import that curriculum pack.");
+    } finally {
+      setImportingPackId(null);
+    }
+  }
 
   async function handleUpload(e: React.FormEvent) {
     e.preventDefault();
@@ -145,6 +177,36 @@ export default function ResourcesPage() {
       <p className="mt-1 text-sm text-slate-600">
         Upload curriculum documents, schemes of work, and teaching resources (PDF, DOCX, or TXT).
       </p>
+
+      {curriculumPacks.length > 0 && (
+        <section className="mt-6 rounded-xl border border-slate-200 p-5">
+          <h2 className="text-sm font-semibold text-slate-900">Starter curriculum packs</h2>
+          <p className="mt-1 text-xs text-slate-500">
+            Full-year, week-by-week English National Curriculum lesson content, ready to ground your planning and AI
+            enhancement -- shared with the whole workspace once imported.
+          </p>
+          <div className="mt-3 flex flex-col gap-2">
+            {curriculumPacks.map((pack) => (
+              <div key={pack.id} className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 p-3 text-sm">
+                <span>{pack.display_name}</span>
+                {pack.already_imported ? (
+                  <span className="text-xs font-medium text-green-700">Imported</span>
+                ) : (
+                  <Button
+                    variant="secondary"
+                    className="text-xs"
+                    onClick={() => handleImportPack(pack.id)}
+                    disabled={importingPackId === pack.id}
+                  >
+                    {importingPackId === pack.id ? "Importing…" : "Import"}
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+          {packError && <p className="mt-2 text-sm text-red-600">{packError}</p>}
+        </section>
+      )}
 
       <div className="mt-6 flex flex-wrap gap-3">
         <Input

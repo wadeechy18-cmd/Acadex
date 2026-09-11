@@ -8,8 +8,9 @@ from app.db.session import get_db
 from app.models.planner_class import YearGroup
 from app.models.resource import Resource, ResourceChunk, ResourceType, ResourceVisibility
 from app.models.user import User
+from app.schemas.curriculum_pack import CurriculumPackStatus
 from app.schemas.resource import ResourceChunkResponse, ResourceResponse
-from app.services import resource_service
+from app.services import curriculum_pack_service, resource_service
 
 router = APIRouter(tags=["resources"])
 
@@ -71,3 +72,21 @@ def list_chunks(
 @router.delete("/resources/{resource_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_resource(resource_id: uuid.UUID, db: Session = Depends(get_db), user: User = Depends(get_current_user)) -> None:
     resource_service.delete_resource(db, user, resource_id)
+
+
+@router.get("/organizations/{organization_id}/curriculum-packs", response_model=list[CurriculumPackStatus])
+def list_curriculum_packs(
+    organization_id: uuid.UUID, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+) -> list[dict]:
+    return curriculum_pack_service.list_packs_with_status(db, user, organization_id)
+
+
+@router.post(
+    "/organizations/{organization_id}/curriculum-packs/{pack_id}/import",
+    response_model=ResourceResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def import_curriculum_pack(
+    organization_id: uuid.UUID, pack_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+) -> Resource:
+    return curriculum_pack_service.import_pack(db, user, organization_id, pack_id)

@@ -697,6 +697,13 @@ export interface ActivityLogRow {
   created_at: string;
 }
 
+export interface CurriculumPackStatus {
+  id: string;
+  display_name: string;
+  year_group: YearGroup;
+  already_imported: boolean;
+}
+
 export interface TeacherOverviewRow {
   user_id: string;
   display_name: string;

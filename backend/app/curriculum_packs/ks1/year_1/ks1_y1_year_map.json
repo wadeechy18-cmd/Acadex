@@ -1,0 +1,157 @@
+{
+  "stage": {
+    "id": "ks1_y1",
+    "name": "Key Stage 1 — Year 1",
+    "age_range": "5-6",
+    "framework_ref": "National Curriculum in England, DfE 2014",
+    "subjects": [
+      {
+        "id": "ENG",
+        "name": "English",
+        "key_objectives": [
+          {"obj_id": "ENG.R1", "strand": "Reading — word reading", "description": "Apply phonic knowledge to decode words (Phase 5/6), respond speedily with correct sound for graphemes, read words with common suffixes"},
+          {"obj_id": "ENG.R2", "strand": "Reading — comprehension", "description": "Discuss significance of title/events, make inferences, predict, retell familiar stories, discuss word meanings"},
+          {"obj_id": "ENG.W1", "strand": "Writing — transcription", "description": "Spell words containing 40+ phonemes taught, common exception words, name letters of the alphabet, write from memory simple sentences"},
+          {"obj_id": "ENG.W2", "strand": "Writing — composition", "description": "Write sentences by saying aloud what they're going to write, sequence sentences to form short narratives, re-read to check sense"},
+          {"obj_id": "ENG.W3", "strand": "Writing — vocabulary, grammar, punctuation", "description": "Join words/sentences using 'and', use capital letters, full stops, question marks, exclamation marks"},
+          {"obj_id": "ENG.SL1", "strand": "Spoken language", "description": "Listen and respond appropriately, ask relevant questions, articulate and justify answers, participate in discussions"}
+        ]
+      },
+      {
+        "id": "MATHS",
+        "name": "Mathematics",
+        "key_objectives": [
+          {"obj_id": "MATHS.N1", "strand": "Number — place value", "description": "Count to and across 100, read/write numbers to 20 in numerals and words, identify one more/one less"},
+          {"obj_id": "MATHS.N2", "strand": "Number — addition and subtraction", "description": "Read/write/interpret mathematical statements using +, -, =, add/subtract one-digit and two-digit numbers to 20, solve missing number problems"},
+          {"obj_id": "MATHS.N3", "strand": "Number — multiplication and division", "description": "Solve one-step problems involving multiplication/division using concrete objects, arrays, grouping and sharing"},
+          {"obj_id": "MATHS.N4", "strand": "Number — fractions", "description": "Recognise, find and name a half and a quarter of an object, shape or quantity"},
+          {"obj_id": "MATHS.MEA", "strand": "Measurement", "description": "Compare/describe length, mass, capacity, time; sequence events; recognise coins and notes; tell time to hour/half hour"},
+          {"obj_id": "MATHS.GEO", "strand": "Geometry", "description": "Recognise and name common 2D and 3D shapes, describe position, direction and movement including half/quarter turns"}
+        ]
+      },
+      {
+        "id": "SCI",
+        "name": "Science",
+        "key_objectives": [
+          {"obj_id": "SCI.MAT", "strand": "Everyday materials", "description": "Distinguish object from material, identify and name common materials, describe simple physical properties, compare materials"},
+          {"obj_id": "SCI.ANI", "strand": "Animals including humans", "description": "Identify and name a variety of common animals, name parts of the human body, describe basic needs for survival"},
+          {"obj_id": "SCI.SEA", "strand": "Seasonal changes", "description": "Observe changes across the four seasons, observe and describe weather associated with seasons and day length variation"},
+          {"obj_id": "SCI.PLA", "strand": "Plants", "description": "Identify and name a variety of common wild and garden plants including deciduous/evergreen trees, identify basic structure of plants"}
+        ]
+      },
+      {
+        "id": "HIST",
+        "name": "History",
+        "key_objectives": [
+          {"obj_id": "HIST.1", "strand": "Changes within living memory", "description": "Understand changes within living memory, revealing aspects of change in national life where appropriate"},
+          {"obj_id": "HIST.2", "strand": "Significant individuals/events", "description": "Learn about events beyond living memory that are significant nationally/globally, and lives of significant individuals"}
+        ]
+      },
+      {
+        "id": "GEOG",
+        "name": "Geography",
+        "key_objectives": [
+          {"obj_id": "GEOG.1", "strand": "Locational knowledge", "description": "Name and locate the world's continents and oceans, name/locate the four countries and capital cities of the UK"},
+          {"obj_id": "GEOG.2", "strand": "Human and physical geography", "description": "Identify seasonal/daily weather patterns, use basic geographical vocabulary for human and physical features"}
+        ]
+      },
+      {
+        "id": "ART",
+        "name": "Art and Design",
+        "key_objectives": [
+          {"obj_id": "ART.1", "strand": "Drawing, painting, sculpture", "description": "Use a range of materials to design and make products, develop techniques in drawing, painting and sculpture"},
+          {"obj_id": "ART.2", "strand": "Learning about artists", "description": "Learn about the work of a range of artists, craft makers and designers, describing differences and similarities"}
+        ]
+      }
+    ]
+  },
+
+  "terms": [
+    {
+      "id": "y1_autumn_1",
+      "label": "Year 1 Autumn 1",
+      "weeks": 7,
+      "theme": "Marvellous Me / Toys Past and Present",
+      "weekly_themes": [
+        {"week_number": 1, "sub_theme": "Settling into Year 1 / All About Me", "subjects_covered": ["ENG","MATHS","SCI","ART"]},
+        {"week_number": 2, "sub_theme": "Toys Now", "subjects_covered": ["ENG","MATHS","HIST","ART"]},
+        {"week_number": 3, "sub_theme": "Toys in the Past", "subjects_covered": ["ENG","MATHS","HIST","SCI"]},
+        {"week_number": 4, "sub_theme": "Comparing Toys Then and Now", "subjects_covered": ["ENG","MATHS","HIST","ART"]},
+        {"week_number": 5, "sub_theme": "Materials: What Are Toys Made Of?", "subjects_covered": ["ENG","MATHS","SCI"]},
+        {"week_number": 6, "sub_theme": "Famous Toy Inventors", "subjects_covered": ["ENG","MATHS","HIST","ART"]},
+        {"week_number": 7, "sub_theme": "Toy Museum Exhibition (Half-Term Project)", "subjects_covered": ["ENG","MATHS","HIST","ART"]}
+      ]
+    },
+    {
+      "id": "y1_autumn_2",
+      "label": "Year 1 Autumn 2",
+      "weeks": 7,
+      "theme": "Fire! Fire! (Great Fire of London) / Bonfire Night",
+      "weekly_themes": [
+        {"week_number": 8, "sub_theme": "What Is Fire? Fire Safety", "subjects_covered": ["ENG","MATHS","SCI"]},
+        {"week_number": 9, "sub_theme": "The Great Fire of London: What Happened?", "subjects_covered": ["ENG","MATHS","HIST"]},
+        {"week_number": 10, "sub_theme": "Samuel Pepys and Eyewitness Accounts", "subjects_covered": ["ENG","MATHS","HIST"]},
+        {"week_number": 11, "sub_theme": "London Then and Now", "subjects_covered": ["ENG","MATHS","HIST","GEOG"]},
+        {"week_number": 12, "sub_theme": "Autumn Changes and Weather", "subjects_covered": ["ENG","MATHS","SCI","GEOG"]},
+        {"week_number": 13, "sub_theme": "Christmas Around the World", "subjects_covered": ["ENG","MATHS","GEOG","ART"]},
+        {"week_number": 14, "sub_theme": "Christmas Performance and Celebration", "subjects_covered": ["ENG","MATHS","ART"]}
+      ]
+    },
+    {
+      "id": "y1_spring_1",
+      "label": "Year 1 Spring 1",
+      "weeks": 6,
+      "theme": "Land Ahoy! Explorers and Oceans",
+      "weekly_themes": [
+        {"week_number": 15, "sub_theme": "New Year, New Learning: Number Recap", "subjects_covered": ["ENG","MATHS"]},
+        {"week_number": 16, "sub_theme": "Oceans of the World", "subjects_covered": ["ENG","MATHS","GEOG"]},
+        {"week_number": 17, "sub_theme": "Famous Explorers", "subjects_covered": ["ENG","MATHS","HIST","GEOG"]},
+        {"week_number": 18, "sub_theme": "Materials for Boats: Floating and Sinking", "subjects_covered": ["ENG","MATHS","SCI"]},
+        {"week_number": 19, "sub_theme": "Under the Sea Creatures", "subjects_covered": ["ENG","MATHS","SCI","ART"]},
+        {"week_number": 20, "sub_theme": "Winter Seasonal Changes", "subjects_covered": ["ENG","MATHS","SCI"]}
+      ]
+    },
+    {
+      "id": "y1_spring_2",
+      "label": "Year 1 Spring 2",
+      "weeks": 6,
+      "theme": "Paws, Claws and Whiskers (Animals)",
+      "weekly_themes": [
+        {"week_number": 21, "sub_theme": "Animal Groups: Mammals, Birds, Fish", "subjects_covered": ["ENG","MATHS","SCI"]},
+        {"week_number": 22, "sub_theme": "Pets and Their Needs", "subjects_covered": ["ENG","MATHS","SCI"]},
+        {"week_number": 23, "sub_theme": "Farm and Wild Animals", "subjects_covered": ["ENG","MATHS","SCI","GEOG"]},
+        {"week_number": 24, "sub_theme": "The Human Body", "subjects_covered": ["ENG","MATHS","SCI"]},
+        {"week_number": 25, "sub_theme": "Easter and Spring Changes", "subjects_covered": ["ENG","MATHS","SCI","ART"]},
+        {"week_number": 26, "sub_theme": "Animal Art (Andy Warhol/Rousseau Study)", "subjects_covered": ["ENG","MATHS","ART"]}
+      ]
+    },
+    {
+      "id": "y1_summer_1",
+      "label": "Year 1 Summer 1",
+      "weeks": 6,
+      "theme": "Around Our World",
+      "weekly_themes": [
+        {"week_number": 27, "sub_theme": "The Seven Continents", "subjects_covered": ["ENG","MATHS","GEOG"]},
+        {"week_number": 28, "sub_theme": "The United Kingdom: Our Country", "subjects_covered": ["ENG","MATHS","GEOG","HIST"]},
+        {"week_number": 29, "sub_theme": "Hot and Cold Places", "subjects_covered": ["ENG","MATHS","GEOG","SCI"]},
+        {"week_number": 30, "sub_theme": "Plants Around the World", "subjects_covered": ["ENG","MATHS","SCI"]},
+        {"week_number": 31, "sub_theme": "Growing Our Own Plants", "subjects_covered": ["ENG","MATHS","SCI"]},
+        {"week_number": 32, "sub_theme": "Fractions and Sharing (Maths Focus)", "subjects_covered": ["ENG","MATHS"]}
+      ]
+    },
+    {
+      "id": "y1_summer_2",
+      "label": "Year 1 Summer 2",
+      "weeks": 6,
+      "theme": "Beach Combers / Ready for Year 2",
+      "weekly_themes": [
+        {"week_number": 33, "sub_theme": "Seaside Holidays Then and Now", "subjects_covered": ["ENG","MATHS","HIST","GEOG"]},
+        {"week_number": 34, "sub_theme": "Rock Pools and Coastal Life", "subjects_covered": ["ENG","MATHS","SCI"]},
+        {"week_number": 35, "sub_theme": "Time and Measurement Recap", "subjects_covered": ["ENG","MATHS"]},
+        {"week_number": 36, "sub_theme": "Famous Artists Recap and Final Art Project", "subjects_covered": ["ENG","MATHS","ART"]},
+        {"week_number": 37, "sub_theme": "Transition to Year 2", "subjects_covered": ["ENG","MATHS"]},
+        {"week_number": 38, "sub_theme": "Sports Day and End of Year Celebration", "subjects_covered": ["ENG","MATHS","ART"]}
+      ]
+    }
+  ]
+}
