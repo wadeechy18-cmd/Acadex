@@ -34,8 +34,66 @@ def test_create_lesson_plan_starts_at_version_1_with_empty_content(client):
     assert plan["status"] == "draft"
 
     detail = client.get(f"/api/v1/lesson-plans/{plan['id']}", headers=auth_headers(owner)).json()
-    assert detail["content"]["sections"] == []
     assert detail["content"]["learning_objectives"] == []
+
+
+def test_create_lesson_plan_prefills_sections_from_template(client):
+    """Phase 4: a new lesson plan isn't blank -- it starts from the local
+    planning engine's template skeleton for the chosen type, timed to exactly
+    the requested duration.
+    """
+    owner, _, class_id = create_school_class(client)
+    plan = create_lesson_plan(client, owner, class_id, template_type="standard", duration_minutes=50)
+
+    detail = client.get(f"/api/v1/lesson-plans/{plan['id']}", headers=auth_headers(owner)).json()
+    sections = detail["content"]["sections"]
+    assert len(sections) == 7  # standard template has 7 skeleton sections
+    assert sum(s["duration_minutes"] for s in sections) == 50
+
+
+def test_quality_check_reflects_timing_and_missing_objectives(client):
+    owner, _, class_id = create_school_class(client)
+    plan = create_lesson_plan(client, owner, class_id, template_type="standard", duration_minutes=50)
+
+    report = client.get(f"/api/v1/lesson-plans/{plan['id']}/quality-check", headers=auth_headers(owner)).json()
+    assert report["timing"]["status"] == "ok"  # template sections already sum to the full duration
+    assert any("learning objectives" in i["message"] for i in report["issues"])
+
+
+def test_draft_quality_check_reflects_unsaved_edits(client):
+    """The draft endpoint validates whatever content is passed in, not what's
+    persisted -- lets the editor check before the teacher hits Save.
+    """
+    owner, _, class_id = create_school_class(client)
+    plan = create_lesson_plan(client, owner, class_id, template_type="standard", duration_minutes=50)
+
+    draft = {
+        "title": plan["title"],
+        "topic": plan["topic"],
+        "duration_minutes": 50,
+        "template_type": "standard",
+        "content": {
+            "learning_objectives": ["Explain atomic structure"],
+            "sections": [{"id": "s1", "type": "starter", "title": "Starter", "duration_minutes": 10, "body": []}],
+        },
+    }
+    report = client.post(f"/api/v1/lesson-plans/{plan['id']}/quality-check", json=draft, headers=auth_headers(owner)).json()
+    assert report["timing"]["status"] == "under"
+    assert report["timing"]["difference_minutes"] == 40
+    assert not any("learning objectives" in i["message"] for i in report["issues"])
+
+    # Persisted content is untouched -- this never saved anything.
+    detail = client.get(f"/api/v1/lesson-plans/{plan['id']}", headers=auth_headers(owner)).json()
+    assert len(detail["content"]["sections"]) == 7
+
+
+def test_quality_check_requires_org_membership(client):
+    owner, _, class_id = create_school_class(client)
+    plan = create_lesson_plan(client, owner, class_id)
+    outsider = register_teacher(client)
+
+    res = client.get(f"/api/v1/lesson-plans/{plan['id']}/quality-check", headers=auth_headers(outsider))
+    assert res.status_code == 403
 
 
 def test_only_class_owner_can_create_lesson_plan(client):

@@ -6,11 +6,19 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { QualityPanel } from "@/components/planner/QualityPanel";
 import { SortableSection } from "@/components/planner/SortableSection";
 import { StringListEditor } from "@/components/planner/StringListEditor";
 import { apiFetch, ApiError } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
-import type { LessonPlanContent, LessonPlanDetail, LessonPlanVersionSummary, LessonSection } from "@/types";
+import type {
+  LessonPlanContent,
+  LessonPlanDetail,
+  LessonPlanQualityReport,
+  LessonPlanVersionSummary,
+  LessonSection,
+  TimingSuggestion,
+} from "@/types";
 
 function newSectionId(): string {
   return typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `s-${Date.now()}-${Math.random()}`;
@@ -43,6 +51,7 @@ export default function LessonPlanEditorPage() {
 
   const [versions, setVersions] = useState<LessonPlanVersionSummary[]>([]);
   const [showVersions, setShowVersions] = useState(false);
+  const [qualityReport, setQualityReport] = useState<LessonPlanQualityReport | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
@@ -58,13 +67,52 @@ export default function LessonPlanEditorPage() {
       .then((detail) => {
         setPlan(detail);
         setContent(detail.content);
+        return checkQuality(detail, detail.content);
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : "Couldn't load this lesson plan."))
       .finally(() => setDataLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, planId]);
 
   const isOwner = !!(plan && user && plan.teacher_user_id === user.id);
-  const totalMinutes = content.sections.reduce((sum, s) => sum + (s.duration_minutes || 0), 0);
+
+  async function checkQuality(currentPlan: LessonPlanDetail, currentContent: LessonPlanContent) {
+    try {
+      const report = await apiFetch<LessonPlanQualityReport>(
+        `/lesson-plans/${planId}/quality-check`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            title: currentPlan.title,
+            topic: currentPlan.topic,
+            duration_minutes: currentPlan.duration_minutes,
+            template_type: currentPlan.template_type,
+            content: currentContent,
+          }),
+        },
+        true
+      );
+      setQualityReport(report);
+    } catch {
+      // Non-critical -- the editor still works without the quality panel.
+    }
+  }
+
+  function applySuggestion(suggestion: TimingSuggestion) {
+    let nextSections = content.sections;
+    if (suggestion.action === "extend_section" && suggestion.section_id) {
+      nextSections = content.sections.map((s) =>
+        s.id === suggestion.section_id
+          ? { ...s, duration_minutes: Math.max(0, s.duration_minutes + (suggestion.extend_by_minutes ?? 0)) }
+          : s
+      );
+    } else if (suggestion.action === "add_section" && suggestion.new_section) {
+      nextSections = [...content.sections, suggestion.new_section];
+    }
+    const nextContent = { ...content, sections: nextSections };
+    setContent(nextContent);
+    if (plan) checkQuality(plan, nextContent);
+  }
 
   function updateSection(index: number, section: LessonSection) {
     const sections = [...content.sections];
@@ -110,6 +158,7 @@ export default function LessonPlanEditorPage() {
       const refreshed = await apiFetch<LessonPlanDetail>(`/lesson-plans/${planId}`, undefined, true);
       setPlan(refreshed);
       setSaveMessage(`Saved as version ${refreshed.latest_version_number}.`);
+      checkQuality(refreshed, content);
     } catch (err) {
       setSaveMessage(err instanceof ApiError ? err.message : "Couldn't save.");
     } finally {
@@ -133,6 +182,7 @@ export default function LessonPlanEditorPage() {
     const refreshed = await apiFetch<LessonPlanDetail>(`/lesson-plans/${planId}`, undefined, true);
     setPlan(refreshed);
     setContent(refreshed.content);
+    checkQuality(refreshed, refreshed.content);
     loadVersions();
   }
 
@@ -169,6 +219,9 @@ export default function LessonPlanEditorPage() {
         </div>
         {isOwner && (
           <div className="flex gap-2">
+            <Button variant="secondary" className="text-sm" onClick={() => plan && checkQuality(plan, content)}>
+              Check timing
+            </Button>
             <Button variant="secondary" className="text-sm" onClick={loadVersions}>
               History
             </Button>
@@ -182,19 +235,13 @@ export default function LessonPlanEditorPage() {
         )}
       </div>
 
-      <p
-        className={`mt-2 text-sm ${
-          totalMinutes === plan.duration_minutes ? "text-green-700" : "text-amber-700"
-        }`}
-      >
-        Sections total {totalMinutes} min of {plan.duration_minutes} min planned
-        {totalMinutes !== plan.duration_minutes &&
-          (totalMinutes < plan.duration_minutes
-            ? ` — ${plan.duration_minutes - totalMinutes} min unaccounted for`
-            : ` — ${totalMinutes - plan.duration_minutes} min over`)}
-      </p>
-
       {saveMessage && <p className="mt-2 text-sm text-slate-600">{saveMessage}</p>}
+
+      {qualityReport && (
+        <div className="mt-4">
+          <QualityPanel report={qualityReport} onApplySuggestion={applySuggestion} readOnly={!isOwner} />
+        </div>
+      )}
 
       {showVersions && (
         <div className="mt-4 rounded-xl border border-slate-200 p-4">

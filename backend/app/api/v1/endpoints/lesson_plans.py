@@ -7,6 +7,7 @@ from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.lesson_plan import LessonPlan, LessonPlanVersion
 from app.models.user import User
+from app.planning.validator import LessonPlanQualityReport
 from app.schemas.lesson_plan import (
     LessonPlanContent,
     LessonPlanCreate,
@@ -14,6 +15,7 @@ from app.schemas.lesson_plan import (
     LessonPlanResponse,
     LessonPlanUpdate,
     LessonPlanVersionSummary,
+    QualityCheckRequest,
     SaveContentRequest,
 )
 from app.services import lesson_plan_service
@@ -77,6 +79,27 @@ def get_lesson_plan(
         updated_at=lesson_plan.updated_at,
         latest_version_number=latest.version_number,
         content=LessonPlanContent.model_validate(latest.content),
+    )
+
+
+@router.get("/lesson-plans/{lesson_plan_id}/quality-check", response_model=LessonPlanQualityReport)
+def quality_check(
+    lesson_plan_id: uuid.UUID, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+) -> LessonPlanQualityReport:
+    return lesson_plan_service.get_quality_report(db, user, lesson_plan_id)
+
+
+@router.post("/lesson-plans/{lesson_plan_id}/quality-check", response_model=LessonPlanQualityReport)
+def quality_check_draft(
+    lesson_plan_id: uuid.UUID,
+    payload: QualityCheckRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> LessonPlanQualityReport:
+    return lesson_plan_service.get_draft_quality_report(
+        db, user, lesson_plan_id,
+        title=payload.title, topic=payload.topic, duration_minutes=payload.duration_minutes,
+        template_type=payload.template_type, content=payload.content,
     )
 
 

@@ -5,6 +5,8 @@ from sqlalchemy.orm import Session
 
 from app.models.lesson_plan import LessonPlan, LessonPlanVersion
 from app.models.user import User
+from app.planning.templates import build_sections_from_template
+from app.planning.validator import LessonPlanQualityReport, validate_lesson_plan
 from app.schemas.lesson_plan import LessonPlanContent, LessonPlanCreate, LessonPlanUpdate
 from app.services.planner_class_service import assert_can_manage_class, get_class
 
@@ -48,11 +50,14 @@ def create_lesson_plan(db: Session, user: User, class_id: uuid.UUID, payload: Le
     db.add(lesson_plan)
     db.flush()
 
+    initial_content = LessonPlanContent(
+        sections=build_sections_from_template(payload.template_type, payload.duration_minutes)
+    )
     db.add(
         LessonPlanVersion(
             lesson_plan_id=lesson_plan.id,
             version_number=1,
-            content=LessonPlanContent().model_dump(mode="json"),
+            content=initial_content.model_dump(mode="json"),
             created_by_user_id=user.id,
         )
     )
@@ -75,6 +80,29 @@ def get_lesson_plan(db: Session, user: User, lesson_plan_id: uuid.UUID) -> Lesso
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Lesson plan not found.")
     get_class(db, user, lesson_plan.class_id)  # raises 403 if not an org member
     return lesson_plan
+
+
+def get_quality_report(db: Session, user: User, lesson_plan_id: uuid.UUID) -> LessonPlanQualityReport:
+    lesson_plan = get_lesson_plan(db, user, lesson_plan_id)
+    latest = get_latest_version(db, lesson_plan.id)
+    content = LessonPlanContent.model_validate(latest.content)
+    return validate_lesson_plan(
+        title=lesson_plan.title,
+        topic=lesson_plan.topic,
+        duration_minutes=lesson_plan.duration_minutes,
+        template_type=lesson_plan.template_type,
+        content=content,
+    )
+
+
+def get_draft_quality_report(
+    db: Session, user: User, lesson_plan_id: uuid.UUID, *, title: str, topic: str,
+    duration_minutes: int, template_type, content: LessonPlanContent,
+) -> LessonPlanQualityReport:
+    get_lesson_plan(db, user, lesson_plan_id)  # membership check only -- ignores persisted content
+    return validate_lesson_plan(
+        title=title, topic=topic, duration_minutes=duration_minutes, template_type=template_type, content=content
+    )
 
 
 def assert_can_manage_lesson_plan(db: Session, user: User, lesson_plan_id: uuid.UUID) -> LessonPlan:

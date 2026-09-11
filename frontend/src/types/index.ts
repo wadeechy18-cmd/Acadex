@@ -524,3 +524,29 @@ export interface LessonPlanVersionSummary {
   created_by_user_id: string | null;
   created_at: string;
 }
+
+export interface TimingSuggestion {
+  label: string;
+  action: "extend_section" | "add_section";
+  section_id: string | null;
+  extend_by_minutes: number | null;
+  new_section: LessonSection | null;
+}
+
+export interface TimingCheck {
+  total_minutes: number;
+  planned_minutes: number;
+  difference_minutes: number;
+  status: "ok" | "under" | "over";
+  suggestions: TimingSuggestion[];
+}
+
+export interface QualityIssue {
+  severity: "info" | "warning";
+  message: string;
+}
+
+export interface LessonPlanQualityReport {
+  timing: TimingCheck;
+  issues: QualityIssue[];
+}

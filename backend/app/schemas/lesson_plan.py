@@ -74,6 +74,18 @@ class SaveContentRequest(BaseModel):
     content: LessonPlanContent
 
 
+class QualityCheckRequest(BaseModel):
+    """Validates a draft in-progress edit, not necessarily what's persisted --
+    lets the editor check timing/quality live before the teacher saves.
+    """
+
+    title: str = Field(min_length=1, max_length=250)
+    topic: str = Field(min_length=1, max_length=250)
+    duration_minutes: int = Field(gt=0, le=300)
+    template_type: LessonPlanTemplateType
+    content: LessonPlanContent
+
+
 class LessonPlanResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
