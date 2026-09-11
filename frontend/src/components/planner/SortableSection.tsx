@@ -42,7 +42,7 @@ export function SortableSection({ section, onChange, onDelete, onDuplicate }: Pr
           {...attributes}
           {...listeners}
           aria-label="Drag to reorder"
-          className="mt-2 cursor-grab select-none text-slate-400 hover:text-slate-600"
+          className="mt-2 cursor-grab select-none text-slate-400 hover:text-slate-600 print:hidden"
         >
           ⋮⋮
         </button>
@@ -91,20 +91,20 @@ export function SortableSection({ section, onChange, onDelete, onDuplicate }: Pr
                 <button
                   type="button"
                   onClick={() => removeBlock(i)}
-                  className="text-xs text-slate-400 hover:text-red-600"
+                  className="text-xs text-slate-400 hover:text-red-600 print:hidden"
                   aria-label="Remove block"
                 >
                   ✕
                 </button>
               </div>
             ))}
-            <button type="button" onClick={addBlock} className="self-start text-xs font-medium text-brand-700 hover:underline">
+            <button type="button" onClick={addBlock} className="self-start text-xs font-medium text-brand-700 hover:underline print:hidden">
               + Add content
             </button>
           </div>
         </div>
 
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1 print:hidden">
           <Button variant="secondary" className="px-2 py-1 text-xs" onClick={onDuplicate}>
             Duplicate
           </Button>

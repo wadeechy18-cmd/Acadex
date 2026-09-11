@@ -26,11 +26,16 @@ class WeeklyPlan(UUIDPKMixin, TimestampMixin, Base):
     cross-class problems like double-booking, which is what "overload"
     means for a teacher in practice. week_start_date is always normalised
     to that week's Monday (see weekly_plan_service._monday_of) so there is
-    exactly one plan per teacher per ISO week.
+    exactly one plan per teacher per organization per ISO week -- every
+    teacher has at least a PERSONAL org plus possibly one or more SCHOOL
+    orgs, and needs an independent plan in each, so organization_id must be
+    part of the uniqueness key, not just (teacher, week).
     """
 
     __tablename__ = "weekly_plans"
-    __table_args__ = (UniqueConstraint("teacher_user_id", "week_start_date", name="uq_weekly_plan_teacher_week"),)
+    __table_args__ = (
+        UniqueConstraint("organization_id", "teacher_user_id", "week_start_date", name="uq_weekly_plan_org_teacher_week"),
+    )
 
     organization_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True

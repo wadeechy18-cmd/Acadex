@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
-import { apiFetch, ApiError } from "@/lib/api-client";
+import { apiFetch, ApiError, downloadFile } from "@/lib/api-client";
 import type { AnswerKey, Homework, PracticeItem, PracticeSetContent, Resource, Worksheet } from "@/types";
 
 type PracticeSet = Worksheet | Homework;
@@ -34,6 +34,7 @@ export function PracticeSetPanel({ lessonPlanId, kind, resources, readOnly }: Pr
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [answerKeys, setAnswerKeys] = useState<Record<string, AnswerKey>>({});
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const [aiOpen, setAiOpen] = useState(false);
   const [aiInstructions, setAiInstructions] = useState("");
@@ -83,6 +84,15 @@ export function PracticeSetPanel({ lessonPlanId, kind, resources, readOnly }: Pr
     await apiFetch(`/${basePath}/${id}`, { method: "DELETE" }, true);
     setItems((prev) => prev.filter((i) => i.id !== id));
     if (expandedId === id) setExpandedId(null);
+  }
+
+  async function handleExport(itemId: string, format: "pdf" | "docx", includeAnswers: boolean) {
+    setExportError(null);
+    try {
+      await downloadFile(`/${basePath}/${itemId}/export?format=${format}&include_answers=${includeAnswers}`);
+    } catch (err) {
+      setExportError(err instanceof ApiError ? err.message : `Couldn't export this ${kind}.`);
+    }
   }
 
   async function toggleAnswerKey(id: string) {
@@ -162,6 +172,7 @@ export function PracticeSetPanel({ lessonPlanId, kind, resources, readOnly }: Pr
         <div className="mt-3 flex flex-col gap-4">
           {loading && <p className="text-sm text-slate-500">Loading…</p>}
           {error && <p className="text-sm text-red-600">{error}</p>}
+          {exportError && <p className="text-sm text-red-600">{exportError}</p>}
 
           {!readOnly && (
             <div className="flex flex-wrap gap-2">
@@ -243,6 +254,22 @@ export function PracticeSetPanel({ lessonPlanId, kind, resources, readOnly }: Pr
                         </button>
                       )}
                     </div>
+                  </div>
+
+                  <div className="mt-1 flex items-center gap-3 text-xs text-slate-400">
+                    <span>Export:</span>
+                    <button type="button" onClick={() => handleExport(item.id, "pdf", false)} className="font-medium text-brand-700 hover:underline">
+                      PDF
+                    </button>
+                    <button type="button" onClick={() => handleExport(item.id, "pdf", true)} className="font-medium text-brand-700 hover:underline">
+                      PDF (with answers)
+                    </button>
+                    <button type="button" onClick={() => handleExport(item.id, "docx", false)} className="font-medium text-brand-700 hover:underline">
+                      DOCX
+                    </button>
+                    <button type="button" onClick={() => handleExport(item.id, "docx", true)} className="font-medium text-brand-700 hover:underline">
+                      DOCX (with answers)
+                    </button>
                   </div>
 
                   {answerKey && (

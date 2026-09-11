@@ -67,3 +67,30 @@ export async function apiFetch<T>(path: string, init?: RequestInit, authenticate
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
 }
+
+/** Fetches a protected file (export endpoints) and triggers a browser
+ * download -- a plain <a href> can't carry the Authorization header these
+ * endpoints require, so this fetches as a blob and downloads it manually.
+ */
+export async function downloadFile(path: string): Promise<void> {
+  const token = getAccessToken();
+  const res = await fetch(`${API_URL}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+
+  if (!res.ok) {
+    throw new ApiError(res.status, await extractErrorMessage(res));
+  }
+
+  const disposition = res.headers.get("Content-Disposition") ?? "";
+  const match = disposition.match(/filename="?([^"]+)"?/);
+  const filename = match ? match[1] : "download";
+
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}

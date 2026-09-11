@@ -7,6 +7,21 @@ being added, why, and the open decisions that need a call before Phase 1
 starts. No lesson-planner code, migrations, or models exist yet — this is
 architecture only.
 
+## Status: all 10 phases complete
+
+Phases 0–10 have all shipped (workspaces/classes, lesson plan CRUD, the
+local no-AI planning engine, resource ingestion, optional AI enhancement,
+worksheets/homework, the weekly planner, school admin, and PDF/DOCX
+export). The sections below are the original Phase 0 design and are kept
+as-written for context; where the shipped implementation deliberately
+diverged, the reason is documented as a comment at the point of deviation
+in code (e.g. `TeachingClass.subject_name`/`WeeklyPlan`'s per-organization
+scoping) rather than edited back into this doc. Every deviation followed
+the same rule this doc sets out: free text over a taxonomy-coupled FK
+wherever EYFS/KS1/KS2 coverage would otherwise be impossible, and no
+change shipped without tests plus a live check against a running backend
+and frontend.
+
 ## 0. Correction to the brief's assumptions
 
 The brief describes "existing Supabase/PostgreSQL setup" and "Supabase Row

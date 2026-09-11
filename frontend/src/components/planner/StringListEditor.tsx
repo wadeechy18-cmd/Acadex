@@ -33,7 +33,7 @@ export function StringListEditor({ label, items, onChange, placeholder }: Props)
             <button
               type="button"
               onClick={() => removeItem(i)}
-              className="text-xs text-slate-400 hover:text-red-600"
+              className="text-xs text-slate-400 hover:text-red-600 print:hidden"
               aria-label={`Remove ${label} item`}
             >
               ✕
@@ -43,7 +43,7 @@ export function StringListEditor({ label, items, onChange, placeholder }: Props)
         <button
           type="button"
           onClick={() => onChange([...items, ""])}
-          className="self-start text-xs font-medium text-brand-700 hover:underline"
+          className="self-start text-xs font-medium text-brand-700 hover:underline print:hidden"
         >
           + Add
         </button>

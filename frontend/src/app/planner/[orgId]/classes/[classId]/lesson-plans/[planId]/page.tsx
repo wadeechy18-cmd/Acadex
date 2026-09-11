@@ -11,7 +11,7 @@ import { PracticeSetPanel } from "@/components/planner/PracticeSetPanel";
 import { QualityPanel } from "@/components/planner/QualityPanel";
 import { SortableSection } from "@/components/planner/SortableSection";
 import { StringListEditor } from "@/components/planner/StringListEditor";
-import { apiFetch, ApiError } from "@/lib/api-client";
+import { apiFetch, ApiError, downloadFile } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
 import type {
   LessonPlanContent,
@@ -56,6 +56,7 @@ export default function LessonPlanEditorPage() {
   const [showVersions, setShowVersions] = useState(false);
   const [qualityReport, setQualityReport] = useState<LessonPlanQualityReport | null>(null);
   const [resources, setResources] = useState<Resource[]>([]);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
@@ -184,6 +185,15 @@ export default function LessonPlanEditorPage() {
     router.push(`/planner/${orgId}/classes/${classId}/lesson-plans/${copy.id}`);
   }
 
+  async function handleExport(format: "pdf" | "docx") {
+    setExportError(null);
+    try {
+      await downloadFile(`/lesson-plans/${planId}/export?format=${format}`);
+    } catch (err) {
+      setExportError(err instanceof ApiError ? err.message : "Couldn't export this lesson plan.");
+    }
+  }
+
   async function loadVersions() {
     const rows = await apiFetch<LessonPlanVersionSummary[]>(`/lesson-plans/${planId}/versions`, undefined, true);
     setVersions(rows);
@@ -217,7 +227,7 @@ export default function LessonPlanEditorPage() {
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
-      <Link href={`/planner/${orgId}/classes/${classId}/lesson-plans`} className="text-sm font-medium text-brand-700 hover:underline">
+      <Link href={`/planner/${orgId}/classes/${classId}/lesson-plans`} className="text-sm font-medium text-brand-700 hover:underline print:hidden">
         ← Lesson plans
       </Link>
 
@@ -230,34 +240,48 @@ export default function LessonPlanEditorPage() {
             {!isOwner && " · view only"}
           </p>
         </div>
-        {isOwner && (
+        <div className="flex flex-col items-end gap-2 print:hidden">
           <div className="flex gap-2">
-            <Button variant="secondary" className="text-sm" onClick={() => plan && checkQuality(plan, content)}>
-              Check timing
+            <Button variant="secondary" className="text-sm" onClick={() => handleExport("pdf")}>
+              Export PDF
             </Button>
-            <Button variant="secondary" className="text-sm" onClick={loadVersions}>
-              History
+            <Button variant="secondary" className="text-sm" onClick={() => handleExport("docx")}>
+              Export DOCX
             </Button>
-            <Button variant="secondary" className="text-sm" onClick={handleDuplicatePlan}>
-              Duplicate
-            </Button>
-            <Button className="text-sm" onClick={handleSave} disabled={saving}>
-              {saving ? "Saving…" : "Save"}
+            <Button variant="secondary" className="text-sm" onClick={() => window.print()}>
+              Print
             </Button>
           </div>
-        )}
+          {isOwner && (
+            <div className="flex gap-2">
+              <Button variant="secondary" className="text-sm" onClick={() => plan && checkQuality(plan, content)}>
+                Check timing
+              </Button>
+              <Button variant="secondary" className="text-sm" onClick={loadVersions}>
+                History
+              </Button>
+              <Button variant="secondary" className="text-sm" onClick={handleDuplicatePlan}>
+                Duplicate
+              </Button>
+              <Button className="text-sm" onClick={handleSave} disabled={saving}>
+                {saving ? "Saving…" : "Save"}
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
 
-      {saveMessage && <p className="mt-2 text-sm text-slate-600">{saveMessage}</p>}
+      {exportError && <p className="mt-2 text-sm text-red-600 print:hidden">{exportError}</p>}
+      {saveMessage && <p className="mt-2 text-sm text-slate-600 print:hidden">{saveMessage}</p>}
 
       {qualityReport && (
-        <div className="mt-4">
+        <div className="mt-4 print:hidden">
           <QualityPanel report={qualityReport} onApplySuggestion={applySuggestion} readOnly={!isOwner} />
         </div>
       )}
 
       {isOwner && (
-        <div className="mt-4">
+        <div className="mt-4 print:hidden">
           <AIEnhancePanel
             lessonPlanId={planId}
             resources={resources}
@@ -269,13 +293,13 @@ export default function LessonPlanEditorPage() {
         </div>
       )}
 
-      <div className="mt-4 flex flex-col gap-4">
+      <div className="mt-4 flex flex-col gap-4 print:hidden">
         <PracticeSetPanel lessonPlanId={planId} kind="worksheet" resources={resources} readOnly={!isOwner} />
         <PracticeSetPanel lessonPlanId={planId} kind="homework" resources={resources} readOnly={!isOwner} />
       </div>
 
       {showVersions && (
-        <div className="mt-4 rounded-xl border border-slate-200 p-4">
+        <div className="mt-4 rounded-xl border border-slate-200 p-4 print:hidden">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-slate-900">Version history</h2>
             <button onClick={() => setShowVersions(false)} className="text-xs text-slate-400 hover:text-slate-600">
@@ -335,7 +359,7 @@ export default function LessonPlanEditorPage() {
             </SortableContext>
           </DndContext>
           {isOwner && (
-            <button type="button" onClick={addSection} className="mt-3 text-sm font-medium text-brand-700 hover:underline">
+            <button type="button" onClick={addSection} className="mt-3 text-sm font-medium text-brand-700 hover:underline print:hidden">
               + Add Section
             </button>
           )}

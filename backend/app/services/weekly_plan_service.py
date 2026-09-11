@@ -118,11 +118,16 @@ def update_item(db: Session, user: User, item_id: uuid.UUID, payload: WeeklyPlan
     plan = db.get(WeeklyPlan, item.weekly_plan_id)
 
     updates = payload.model_dump(exclude_unset=True)
-    class_id = updates.get("class_id", item.class_id)
+    final_class_id = updates.get("class_id", item.class_id)
     if "class_id" in updates:
-        _class_for_item(db, plan, class_id)
-    if "lesson_plan_id" in updates and updates["lesson_plan_id"] is not None:
-        _lesson_plan_for_item(db, class_id, updates["lesson_plan_id"])
+        _class_for_item(db, plan, final_class_id)
+
+    # Re-validate the *final* lesson_plan_id against the *final* class_id
+    # whenever either changes -- changing only class_id must not silently
+    # leave a lesson_plan_id pointing at a different class's plan.
+    final_lesson_plan_id = updates.get("lesson_plan_id", item.lesson_plan_id)
+    if final_lesson_plan_id is not None and ("class_id" in updates or "lesson_plan_id" in updates):
+        _lesson_plan_for_item(db, final_class_id, final_lesson_plan_id)
 
     for field, value in updates.items():
         setattr(item, field, value)

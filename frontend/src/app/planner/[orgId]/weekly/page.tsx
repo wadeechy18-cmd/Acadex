@@ -10,7 +10,14 @@ import { DAYS_OF_WEEK } from "@/types";
 import type { DayOfWeek, LessonPlan, TeachingClass, WeeklyPlanDetail, WeeklyPlanIssue } from "@/types";
 
 function isoDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  // Deliberately NOT toISOString() -- that converts to UTC first, which can
+  // shift the date by one day for any user behind UTC (e.g. late Sunday
+  // evening in America/New_York already reads as Monday in UTC), sending
+  // the wrong week_start_date to the API. Format the *local* date instead.
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function mondayOf(d: Date): Date {

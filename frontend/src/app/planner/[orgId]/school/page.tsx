@@ -19,7 +19,12 @@ import type {
 type Tab = "teachers" | "curriculum" | "activity";
 
 function isoDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  // Local date, not UTC (toISOString() would shift the date for users
+  // behind UTC) -- see the identical helper/comment in the weekly planner page.
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function mondayOf(d: Date): Date {

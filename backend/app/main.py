@@ -36,6 +36,10 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    # Content-Disposition isn't on the CORS-safelisted response header list,
+    # so without this, JS can read a download's bytes but never its
+    # filename (see app.lib.api-client.downloadFile, Phase 10 export).
+    expose_headers=["Content-Disposition"],
 )
 
 app.include_router(api_router, prefix="/api/v1")

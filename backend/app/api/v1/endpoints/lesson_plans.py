@@ -1,6 +1,7 @@
 import uuid
+from typing import Literal
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
@@ -18,7 +19,7 @@ from app.schemas.lesson_plan import (
     QualityCheckRequest,
     SaveContentRequest,
 )
-from app.services import lesson_plan_service
+from app.services import export_service, lesson_plan_service
 
 router = APIRouter(tags=["lesson-plans"])
 
@@ -154,3 +155,14 @@ def delete_lesson_plan(
     lesson_plan_id: uuid.UUID, db: Session = Depends(get_db), user: User = Depends(get_current_user)
 ) -> None:
     lesson_plan_service.delete_lesson_plan(db, user, lesson_plan_id)
+
+
+@router.get("/lesson-plans/{lesson_plan_id}/export")
+def export_lesson_plan(
+    lesson_plan_id: uuid.UUID,
+    format: Literal["pdf", "docx"] = "pdf",
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> Response:
+    data, filename, media_type = export_service.export_lesson_plan(db, user, lesson_plan_id, format)
+    return Response(content=data, media_type=media_type, headers={"Content-Disposition": f'attachment; filename="{filename}"'})

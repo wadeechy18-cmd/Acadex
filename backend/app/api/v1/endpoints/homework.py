@@ -1,6 +1,7 @@
 import uuid
+from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
 from app.ai.provider import AIProvider, get_ai_provider
@@ -16,7 +17,7 @@ from app.schemas.homework import (
     HomeworkUpdate,
 )
 from app.schemas.worksheet import AnswerKey, PracticeSetContent
-from app.services import practice_set_service
+from app.services import export_service, practice_set_service
 
 router = APIRouter(tags=["homework"])
 
@@ -99,6 +100,18 @@ def delete_homework(
     homework_id: uuid.UUID, db: Session = Depends(get_db), user: User = Depends(get_current_user)
 ) -> None:
     practice_set_service.delete(db, user, Homework, homework_id)
+
+
+@router.get("/homework/{homework_id}/export")
+def export_homework(
+    homework_id: uuid.UUID,
+    format: Literal["pdf", "docx"] = "pdf",
+    include_answers: bool = False,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> Response:
+    data, filename, media_type = export_service.export_practice_set(db, user, Homework, homework_id, format, include_answers)
+    return Response(content=data, media_type=media_type, headers={"Content-Disposition": f'attachment; filename="{filename}"'})
 
 
 @router.post("/lesson-plans/{lesson_plan_id}/homework/ai-generate", response_model=PracticeSetContent)
