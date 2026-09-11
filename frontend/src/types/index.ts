@@ -401,3 +401,23 @@ export interface Notification {
   read_at: string | null;
   created_at: string;
 }
+
+export type OrganizationKind = "personal" | "school";
+export type OrganizationRole = "owner" | "admin" | "teacher";
+
+export interface Organization {
+  id: string;
+  kind: OrganizationKind;
+  name: string;
+  created_at: string;
+  my_role: OrganizationRole;
+}
+
+export interface OrganizationMember {
+  id: string;
+  user_id: string;
+  email: string;
+  display_name: string;
+  role: OrganizationRole;
+  joined_at: string;
+}

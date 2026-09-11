@@ -9,6 +9,9 @@ class RegisterRequest(BaseModel):
     password: str = Field(min_length=8, max_length=72)
     display_name: str = Field(min_length=1, max_length=120)
     role: UserRole = UserRole.STUDENT
+    # Teacher-only: naming a school here creates it (with this user as owner)
+    # in addition to their personal workspace. Ignored for student signups.
+    school_name: str | None = Field(default=None, max_length=200)
 
     @field_validator("role")
     @classmethod

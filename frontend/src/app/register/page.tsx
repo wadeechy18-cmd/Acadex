@@ -8,13 +8,22 @@ import { Input } from "@/components/ui/Input";
 import { ApiError } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
 
+type Onboarding = "student" | "individual_teacher" | "school";
+
+const ONBOARDING_OPTIONS: { value: Onboarding; label: string }[] = [
+  { value: "student", label: "Student" },
+  { value: "individual_teacher", label: "Individual Teacher" },
+  { value: "school", label: "School" },
+];
+
 export default function RegisterPage() {
   const router = useRouter();
   const { register } = useAuth();
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"student" | "teacher">("student");
+  const [onboarding, setOnboarding] = useState<Onboarding>("student");
+  const [schoolName, setSchoolName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -23,8 +32,15 @@ export default function RegisterPage() {
     setError(null);
     setSubmitting(true);
     try {
-      await register({ email, password, displayName, role });
-      router.push("/dashboard");
+      const role = onboarding === "student" ? "student" : "teacher";
+      await register({
+        email,
+        password,
+        displayName,
+        role,
+        schoolName: onboarding === "school" ? schoolName : undefined,
+      });
+      router.push(onboarding === "student" ? "/dashboard" : "/planner");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.");
     } finally {
@@ -43,22 +59,32 @@ export default function RegisterPage() {
       <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
         <fieldset className="flex gap-2">
           <legend className="mb-1.5 text-sm font-medium text-slate-700">I am a</legend>
-          {(["student", "teacher"] as const).map((option) => (
+          {ONBOARDING_OPTIONS.map((option) => (
             <button
-              key={option}
+              key={option.value}
               type="button"
-              onClick={() => setRole(option)}
-              className={`flex-1 rounded-lg border px-3.5 py-2.5 text-sm font-medium capitalize transition-colors ${
-                role === option
+              onClick={() => setOnboarding(option.value)}
+              className={`flex-1 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors ${
+                onboarding === option.value
                   ? "border-brand-600 bg-brand-50 text-brand-700"
                   : "border-slate-300 text-slate-600 hover:bg-slate-50"
               }`}
-              aria-pressed={role === option}
+              aria-pressed={onboarding === option.value}
             >
-              {option}
+              {option.label}
             </button>
           ))}
         </fieldset>
+
+        {onboarding === "school" && (
+          <Input
+            label="School name"
+            name="schoolName"
+            required
+            value={schoolName}
+            onChange={(e) => setSchoolName(e.target.value)}
+          />
+        )}
 
         <Input
           label="Full name"
@@ -94,7 +120,7 @@ export default function RegisterPage() {
           </p>
         )}
         <Button type="submit" disabled={submitting} className="mt-2">
-          {submitting ? "Creating account…" : "Start Learning"}
+          {submitting ? "Creating account…" : onboarding === "student" ? "Start Learning" : "Create workspace"}
         </Button>
       </form>
 

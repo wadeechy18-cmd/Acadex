@@ -14,6 +14,7 @@ from app.core.security import (
 )
 from app.models.user import AdminProfile, StudentProfile, TeacherProfile, User, UserRole
 from app.schemas.auth import RegisterRequest
+from app.services.organization_service import create_school_organization, get_or_create_personal_organization
 
 
 def get_display_name(db: Session, user: User) -> str:
@@ -47,6 +48,12 @@ def register_user(db: Session, payload: RegisterRequest) -> User:
 
     db.commit()
     db.refresh(user)
+
+    if payload.role == UserRole.TEACHER:
+        get_or_create_personal_organization(db, user)
+        if payload.school_name:
+            create_school_organization(db, user, payload.school_name)
+
     return user
 
 

@@ -10,6 +10,7 @@ from app.models.notification import Notification
 from app.models.live_class import LiveClass, LiveClassEnrollment, LiveClassRecording
 from app.models.billing import Entitlement, Payment, Purchase, Subscription
 from app.models.ai import AIConversation, AIMessage
+from app.models.organization import Organization, OrganizationMember, OrganizationKind, OrganizationRole
 
 __all__ = [
     "User",
@@ -57,4 +58,8 @@ __all__ = [
     "Entitlement",
     "AIConversation",
     "AIMessage",
+    "Organization",
+    "OrganizationMember",
+    "OrganizationKind",
+    "OrganizationRole",
 ]

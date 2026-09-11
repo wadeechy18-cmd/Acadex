@@ -20,6 +20,7 @@ interface AuthContextValue {
     password: string;
     displayName: string;
     role: Extract<UserRole, "student" | "teacher">;
+    schoolName?: string;
   }) => Promise<User>;
   logout: () => void;
 }
@@ -60,6 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     password: string;
     displayName: string;
     role: Extract<UserRole, "student" | "teacher">;
+    schoolName?: string;
   }): Promise<User> {
     const data = await apiFetch<AuthTokenResponse>("/auth/register", {
       method: "POST",
@@ -68,6 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         password: params.password,
         display_name: params.displayName,
         role: params.role,
+        ...(params.schoolName ? { school_name: params.schoolName } : {}),
       }),
     });
     setTokens(data.access_token, data.refresh_token);
