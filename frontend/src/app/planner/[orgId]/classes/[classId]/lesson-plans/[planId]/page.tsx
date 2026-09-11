@@ -7,6 +7,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { AIEnhancePanel } from "@/components/planner/AIEnhancePanel";
+import { PracticeSetPanel } from "@/components/planner/PracticeSetPanel";
 import { QualityPanel } from "@/components/planner/QualityPanel";
 import { SortableSection } from "@/components/planner/SortableSection";
 import { StringListEditor } from "@/components/planner/StringListEditor";
@@ -267,6 +268,11 @@ export default function LessonPlanEditorPage() {
           />
         </div>
       )}
+
+      <div className="mt-4 flex flex-col gap-4">
+        <PracticeSetPanel lessonPlanId={planId} kind="worksheet" resources={resources} readOnly={!isOwner} />
+        <PracticeSetPanel lessonPlanId={planId} kind="homework" resources={resources} readOnly={!isOwner} />
+      </div>
 
       {showVersions && (
         <div className="mt-4 rounded-xl border border-slate-200 p-4">

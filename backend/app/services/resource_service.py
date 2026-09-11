@@ -15,6 +15,10 @@ from app.storage.base import ALLOWED_DOCUMENT_TYPES, MAX_DOCUMENT_SIZE_BYTES, ge
 # embeds part of the file) -- this is stored and later shown to the teacher.
 _MAX_ERROR_LENGTH = 500
 
+# Keeps a single AI request from ballooning the prompt (and the bill) if a
+# teacher selects several large resources -- excerpts, not full documents.
+_MAX_RESOURCE_CONTEXT_CHARS = 6000
+
 
 def upload_resource(
     db: Session,
@@ -126,6 +130,20 @@ def get_resource(db: Session, user: User, resource_id: uuid.UUID) -> Resource:
 def list_chunks(db: Session, user: User, resource_id: uuid.UUID) -> list[ResourceChunk]:
     get_resource(db, user, resource_id)  # enforces the same visibility rule
     return db.query(ResourceChunk).filter_by(resource_id=resource_id).order_by(ResourceChunk.chunk_index).all()
+
+
+def build_context_excerpt(db: Session, user: User, resource_ids: list[uuid.UUID]) -> str:
+    """Concatenates extracted text from the given resources for use as
+    AI prompt context. Reused by every AI-generation entry point (lesson
+    plan enhancement, worksheet/homework generation) so they all go through
+    the same visibility check and the same size cap.
+    """
+    parts = []
+    for resource_id in resource_ids:
+        resource = get_resource(db, user, resource_id)  # enforces visibility -- 404s, never substitutes
+        chunks = list_chunks(db, user, resource_id)
+        parts.append(f"--- {resource.file_name} ---\n" + "\n".join(c.text for c in chunks))
+    return "\n\n".join(parts)[:_MAX_RESOURCE_CONTEXT_CHARS]
 
 
 def delete_resource(db: Session, user: User, resource_id: uuid.UUID) -> None:

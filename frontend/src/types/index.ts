@@ -591,3 +591,52 @@ export interface Resource {
   extraction_error: string | null;
   created_at: string;
 }
+
+export interface PracticeItem {
+  id: string;
+  group: string;
+  prompt: string;
+  marks: number;
+  answer: string;
+}
+
+export interface PracticeSetContent {
+  instructions: string | null;
+  items: PracticeItem[];
+}
+
+export interface AnswerKeyEntry {
+  id: string;
+  group: string;
+  prompt: string;
+  marks: number;
+  answer: string;
+}
+
+export interface AnswerKey {
+  total_marks: number;
+  entries: AnswerKeyEntry[];
+}
+
+export interface Worksheet {
+  id: string;
+  lesson_plan_id: string;
+  title: string;
+  content: PracticeSetContent;
+  total_marks: number;
+  estimated_minutes: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Homework {
+  id: string;
+  lesson_plan_id: string;
+  title: string;
+  content: PracticeSetContent;
+  total_marks: number;
+  estimated_minutes: number;
+  due_date: string | null;
+  created_at: string;
+  updated_at: string;
+}

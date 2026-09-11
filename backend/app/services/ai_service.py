@@ -16,10 +16,6 @@ from app.services import resource_service
 from app.services.lesson_plan_service import assert_can_manage_lesson_plan, get_latest_version
 from app.services.organization_service import assert_org_member
 
-# Keeps a single request from ballooning the prompt (and the bill) if a
-# teacher selects several large resources -- excerpts, not full documents.
-_MAX_RESOURCE_CONTEXT_CHARS = 6000
-
 _SYSTEM_PROMPT = (
     "You are helping a UK teacher refine a lesson plan for their class. Return "
     "a complete, improved version of the lesson plan content as structured "
@@ -33,15 +29,6 @@ _SYSTEM_PROMPT = (
     "content, and never make any claim about a specific student's abilities, "
     "diagnoses, or needs."
 )
-
-
-def _build_resource_context(db: Session, user: User, resource_ids: list[uuid.UUID]) -> str:
-    parts = []
-    for resource_id in resource_ids:
-        resource = resource_service.get_resource(db, user, resource_id)  # enforces visibility -- 404s, never substitutes
-        chunks = resource_service.list_chunks(db, user, resource_id)
-        parts.append(f"--- {resource.file_name} ---\n" + "\n".join(c.text for c in chunks))
-    return "\n\n".join(parts)[:_MAX_RESOURCE_CONTEXT_CHARS]
 
 
 def enhance_lesson_plan(
@@ -76,7 +63,7 @@ def enhance_lesson_plan(
     if instructions:
         prompt_parts.append(f"Teacher's instructions: {instructions}")
 
-    resource_context = _build_resource_context(db, user, resource_ids)
+    resource_context = resource_service.build_context_excerpt(db, user, resource_ids)
     if resource_context:
         prompt_parts.append(f"Authoritative curriculum source material:\n{resource_context}")
 
