@@ -81,7 +81,9 @@ def assert_org_member(
 
 
 def add_member(db: Session, actor: User, organization_id: uuid.UUID, email: str, role: OrganizationRole) -> OrganizationMember:
-    assert_org_member(db, actor, organization_id, min_role=OrganizationRole.ADMIN)
+    actor_membership = assert_org_member(db, actor, organization_id, min_role=OrganizationRole.ADMIN)
+    if _ROLE_RANK[role] > _ROLE_RANK[actor_membership.role]:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "You cannot grant a role higher than your own.")
 
     target = db.query(User).filter(User.email == email).first()
     if not target:
@@ -103,11 +105,19 @@ def add_member(db: Session, actor: User, organization_id: uuid.UUID, email: str,
 def update_member_role(
     db: Session, actor: User, organization_id: uuid.UUID, member_id: uuid.UUID, new_role: OrganizationRole
 ) -> OrganizationMember:
-    assert_org_member(db, actor, organization_id, min_role=OrganizationRole.ADMIN)
+    actor_membership = assert_org_member(db, actor, organization_id, min_role=OrganizationRole.ADMIN)
 
     member = db.query(OrganizationMember).filter_by(id=member_id, organization_id=organization_id).first()
     if not member:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Member not found.")
+
+    # An actor can never act on a member ranked above them, nor grant a role
+    # above their own -- otherwise an ADMIN could promote themselves (or
+    # anyone) straight to OWNER, or demote/remove an existing OWNER.
+    if _ROLE_RANK[member.role] > _ROLE_RANK[actor_membership.role]:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "You cannot modify a member with a higher role than your own.")
+    if _ROLE_RANK[new_role] > _ROLE_RANK[actor_membership.role]:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "You cannot grant a role higher than your own.")
 
     if member.role == OrganizationRole.OWNER and new_role != OrganizationRole.OWNER:
         other_owners = (
@@ -129,11 +139,14 @@ def update_member_role(
 
 
 def remove_member(db: Session, actor: User, organization_id: uuid.UUID, member_id: uuid.UUID) -> None:
-    assert_org_member(db, actor, organization_id, min_role=OrganizationRole.ADMIN)
+    actor_membership = assert_org_member(db, actor, organization_id, min_role=OrganizationRole.ADMIN)
 
     member = db.query(OrganizationMember).filter_by(id=member_id, organization_id=organization_id).first()
     if not member:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Member not found.")
+
+    if _ROLE_RANK[member.role] > _ROLE_RANK[actor_membership.role]:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "You cannot remove a member with a higher role than your own.")
 
     if member.role == OrganizationRole.OWNER:
         other_owners = (

@@ -47,9 +47,11 @@ def check_timing(sections: list[LessonSection], planned_minutes: int) -> TimingC
 
     if difference > 0:
         suggestions: list[TimingSuggestion] = []
-        matched_any = False
+        suggested_section_ids: set[str] = set()
         for keyword in _EXTEND_PRIORITY:
             for section in _matching_sections(sections, keyword):
+                if section.id in suggested_section_ids:
+                    continue  # a section matching multiple keywords (e.g. "Practice Assessment") gets one suggestion, not one per keyword
                 suggestions.append(
                     TimingSuggestion(
                         label=f"Extend {section.title}",
@@ -58,7 +60,8 @@ def check_timing(sections: list[LessonSection], planned_minutes: int) -> TimingC
                         extend_by_minutes=difference,
                     )
                 )
-                matched_any = True
+                suggested_section_ids.add(section.id)
+        matched_any = bool(suggested_section_ids)
         if not matched_any and sections:
             last = sections[-1]
             suggestions.append(

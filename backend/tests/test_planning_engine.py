@@ -61,6 +61,24 @@ def test_timing_check_over_time_suggests_shortening_longest_section():
     assert check.suggestions[0].extend_by_minutes == -10
 
 
+def test_timing_check_never_suggests_the_same_section_twice():
+    """A section whose title/type matches more than one priority keyword
+    (e.g. "Practice Assessment" matches both "practice" and "assessment")
+    must get exactly one suggestion, not one per matching keyword -- two
+    buttons for the same action would let a teacher double-apply the same
+    extension.
+    """
+    sections = [
+        LessonSection(id="1", type="starter", title="Starter", duration_minutes=10, body=[]),
+        LessonSection(id="2", type="practice_assessment", title="Practice Assessment", duration_minutes=35, body=[]),
+    ]
+    check = check_timing(sections, planned_minutes=50)
+    assert check.status == "under"
+
+    section_2_suggestions = [s for s in check.suggestions if s.section_id == "2"]
+    assert len(section_2_suggestions) == 1
+
+
 def test_timing_check_with_no_sections_suggests_adding_one():
     check = check_timing([], planned_minutes=30)
     assert check.status == "under"

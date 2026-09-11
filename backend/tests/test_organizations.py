@@ -146,6 +146,105 @@ def test_cannot_remove_last_owner(client):
     assert res.status_code == 400
 
 
+def test_admin_cannot_add_a_new_member_as_owner(client):
+    """A privilege-escalation guard: ADMIN is below OWNER, so an ADMIN must
+    never be able to grant a role higher than their own.
+    """
+    owner = register_teacher(client, school_name="Escalation School")
+    admin_teacher = register_teacher(client)
+    orgs = client.get("/api/v1/organizations/me", headers=auth_headers(owner)).json()
+    school_id = next(o["id"] for o in orgs if o["kind"] == "school")
+
+    add_admin = client.post(
+        f"/api/v1/organizations/{school_id}/members",
+        json={"email": admin_teacher["email"], "role": "admin"},
+        headers=auth_headers(owner),
+    )
+    assert add_admin.status_code == 201
+
+    outsider = register_teacher(client)
+    res = client.post(
+        f"/api/v1/organizations/{school_id}/members",
+        json={"email": outsider["email"], "role": "owner"},
+        headers=auth_headers(admin_teacher),
+    )
+    assert res.status_code == 403
+
+
+def test_admin_cannot_promote_self_or_others_to_owner(client):
+    owner = register_teacher(client, school_name="Promotion School")
+    admin_teacher = register_teacher(client)
+    orgs = client.get("/api/v1/organizations/me", headers=auth_headers(owner)).json()
+    school_id = next(o["id"] for o in orgs if o["kind"] == "school")
+
+    add = client.post(
+        f"/api/v1/organizations/{school_id}/members",
+        json={"email": admin_teacher["email"], "role": "admin"},
+        headers=auth_headers(owner),
+    )
+    admin_member_id = add.json()["id"]
+
+    self_promote = client.patch(
+        f"/api/v1/organizations/{school_id}/members/{admin_member_id}",
+        json={"role": "owner"},
+        headers=auth_headers(admin_teacher),
+    )
+    assert self_promote.status_code == 403
+
+
+def test_admin_cannot_demote_or_remove_an_owner(client):
+    owner = register_teacher(client, school_name="Demotion School")
+    admin_teacher = register_teacher(client)
+    orgs = client.get("/api/v1/organizations/me", headers=auth_headers(owner)).json()
+    school_id = next(o["id"] for o in orgs if o["kind"] == "school")
+
+    client.post(
+        f"/api/v1/organizations/{school_id}/members",
+        json={"email": admin_teacher["email"], "role": "admin"},
+        headers=auth_headers(owner),
+    )
+    members = client.get(f"/api/v1/organizations/{school_id}/members", headers=auth_headers(owner)).json()
+    owner_member_id = next(m["id"] for m in members if m["role"] == "owner")
+
+    demote = client.patch(
+        f"/api/v1/organizations/{school_id}/members/{owner_member_id}",
+        json={"role": "teacher"},
+        headers=auth_headers(admin_teacher),
+    )
+    assert demote.status_code == 403
+
+    remove = client.delete(
+        f"/api/v1/organizations/{school_id}/members/{owner_member_id}", headers=auth_headers(admin_teacher)
+    )
+    assert remove.status_code == 403
+
+
+def test_owner_can_still_grant_and_revoke_owner_role(client):
+    """The fix must not break the legitimate case: an OWNER promoting a
+    fellow member to co-OWNER, and later removing that co-owner.
+    """
+    owner = register_teacher(client, school_name="Legit Owner School")
+    colleague = register_teacher(client)
+    orgs = client.get("/api/v1/organizations/me", headers=auth_headers(owner)).json()
+    school_id = next(o["id"] for o in orgs if o["kind"] == "school")
+
+    add = client.post(
+        f"/api/v1/organizations/{school_id}/members",
+        json={"email": colleague["email"], "role": "owner"},
+        headers=auth_headers(owner),
+    )
+    assert add.status_code == 201
+    assert add.json()["role"] == "owner"
+
+    demote = client.patch(
+        f"/api/v1/organizations/{school_id}/members/{add.json()['id']}",
+        json={"role": "teacher"},
+        headers=auth_headers(owner),
+    )
+    assert demote.status_code == 200
+    assert demote.json()["role"] == "teacher"
+
+
 def test_personal_workspace_isolated_from_school(client):
     """A school admin must never be able to see or touch a teacher's personal
     workspace, even if that teacher is also a member of their school.
