@@ -640,3 +640,40 @@ export interface Homework {
   created_at: string;
   updated_at: string;
 }
+
+export type DayOfWeek = "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday";
+
+export const DAYS_OF_WEEK: DayOfWeek[] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+
+export interface WeeklyPlanItemView {
+  id: string;
+  class_id: string;
+  class_name: string;
+  lesson_plan_id: string | null;
+  topic: string | null;
+  template_type: string | null;
+  day_of_week: DayOfWeek;
+  start_time: string; // "HH:MM:SS"
+  duration_minutes: number;
+}
+
+export interface WeeklyPlanIssue {
+  category: "conflict" | "overload" | "gap" | "repeated_topic" | "missing_assessment";
+  severity: "info" | "warning";
+  message: string;
+  day_of_week: DayOfWeek | null;
+  item_ids: string[];
+}
+
+export interface WeeklyPlan {
+  id: string;
+  organization_id: string;
+  teacher_user_id: string;
+  week_start_date: string;
+  created_at: string;
+}
+
+export interface WeeklyPlanDetail extends WeeklyPlan {
+  items: WeeklyPlanItemView[];
+  issues: WeeklyPlanIssue[];
+}

@@ -62,6 +62,9 @@ export default function PlannerWorkspacesPage() {
                 </p>
               </Link>
               <div className="flex items-center gap-3">
+                <Link href={`/planner/${org.id}/weekly`} className="text-sm font-medium text-brand-700 hover:underline">
+                  Weekly planner
+                </Link>
                 <Link href={`/planner/${org.id}/resources`} className="text-sm font-medium text-brand-700 hover:underline">
                   Resources
                 </Link>
@@ -75,7 +78,7 @@ export default function PlannerWorkspacesPage() {
       )}
 
       <p className="mt-10 rounded-xl border border-dashed border-slate-300 p-6 text-sm text-slate-500">
-        Click a workspace to manage its classes. Lesson planning and weekly schedules land here in upcoming phases.
+        Click a workspace to manage its classes, or jump to its weekly planner.
       </p>
     </main>
   );
