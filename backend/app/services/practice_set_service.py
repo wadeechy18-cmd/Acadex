@@ -17,7 +17,7 @@ from app.models.usage_record import UsageRecord
 from app.models.user import User
 from app.planning.validator import is_safeguarding_sensitive
 from app.schemas.worksheet import PracticeSetContent
-from app.services import resource_service
+from app.services import activity_service, resource_service
 from app.services.lesson_plan_service import assert_can_manage_lesson_plan, get_lesson_plan
 
 ModelT = TypeVar("ModelT")
@@ -78,6 +78,16 @@ def create(
         **(extra_fields or {}),
     )
     db.add(item)
+    db.flush()
+    activity_service.log_activity(
+        db,
+        organization_id=lesson_plan.organization_id,
+        user_id=user.id,
+        action=f"{model_cls.__name__.lower()}.created",
+        target_type=model_cls.__name__.lower(),
+        target_id=item.id,
+        summary=title,
+    )
     db.commit()
     db.refresh(item)
     return item

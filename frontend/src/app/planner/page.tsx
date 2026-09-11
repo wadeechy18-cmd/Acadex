@@ -68,6 +68,11 @@ export default function PlannerWorkspacesPage() {
                 <Link href={`/planner/${org.id}/resources`} className="text-sm font-medium text-brand-700 hover:underline">
                   Resources
                 </Link>
+                {(org.my_role === "owner" || org.my_role === "admin") && org.kind === "school" && (
+                  <Link href={`/planner/${org.id}/school`} className="text-sm font-medium text-brand-700 hover:underline">
+                    School admin
+                  </Link>
+                )}
                 <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium capitalize text-slate-600">
                   {org.kind}
                 </span>

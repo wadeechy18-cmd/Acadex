@@ -7,6 +7,7 @@ from app.models.organization import OrganizationRole
 from app.models.planner_class import TeachingClass
 from app.models.user import User
 from app.schemas.planner_class import ClassCreate, ClassUpdate
+from app.services import activity_service
 from app.services.organization_service import assert_org_member
 
 
@@ -19,6 +20,16 @@ def create_class(db: Session, user: User, organization_id: uuid.UUID, payload: C
         **payload.model_dump(),
     )
     db.add(teaching_class)
+    db.flush()
+    activity_service.log_activity(
+        db,
+        organization_id=organization_id,
+        user_id=user.id,
+        action="class.created",
+        target_type="class",
+        target_id=teaching_class.id,
+        summary=teaching_class.name,
+    )
     db.commit()
     db.refresh(teaching_class)
     return teaching_class

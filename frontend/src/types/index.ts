@@ -677,3 +677,31 @@ export interface WeeklyPlanDetail extends WeeklyPlan {
   items: WeeklyPlanItemView[];
   issues: WeeklyPlanIssue[];
 }
+
+export interface CurriculumSubject {
+  id: string;
+  organization_id: string;
+  name: string;
+  key_stage: string | null;
+  created_at: string;
+}
+
+export interface ActivityLogRow {
+  id: string;
+  user_id: string | null;
+  actor_name: string;
+  action: string;
+  target_type: string;
+  target_id: string;
+  summary: string;
+  created_at: string;
+}
+
+export interface TeacherOverviewRow {
+  user_id: string;
+  display_name: string;
+  email: string;
+  role: OrganizationRole;
+  class_count: number;
+  lesson_plan_count: number;
+}

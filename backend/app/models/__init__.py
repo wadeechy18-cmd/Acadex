@@ -17,6 +17,8 @@ from app.models.resource import Resource, ResourceChunk, ResourceType, ResourceV
 from app.models.usage_record import UsageRecord
 from app.models.weekly_plan import DayOfWeek, WeeklyPlan, WeeklyPlanItem
 from app.models.worksheet import Homework, Worksheet
+from app.models.activity import ActivityLog
+from app.models.curriculum import CurriculumSubject
 
 __all__ = [
     "User",
@@ -85,4 +87,6 @@ __all__ = [
     "WeeklyPlan",
     "WeeklyPlanItem",
     "DayOfWeek",
+    "ActivityLog",
+    "CurriculumSubject",
 ]

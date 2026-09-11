@@ -8,6 +8,7 @@ from app.models.user import User
 from app.planning.templates import build_sections_from_template
 from app.planning.validator import LessonPlanQualityReport, validate_lesson_plan
 from app.schemas.lesson_plan import LessonPlanContent, LessonPlanCreate, LessonPlanUpdate
+from app.services import activity_service
 from app.services.planner_class_service import assert_can_manage_class, get_class
 
 
@@ -60,6 +61,15 @@ def create_lesson_plan(db: Session, user: User, class_id: uuid.UUID, payload: Le
             content=initial_content.model_dump(mode="json"),
             created_by_user_id=user.id,
         )
+    )
+    activity_service.log_activity(
+        db,
+        organization_id=lesson_plan.organization_id,
+        user_id=user.id,
+        action="lesson_plan.created",
+        target_type="lesson_plan",
+        target_id=lesson_plan.id,
+        summary=lesson_plan.title,
     )
     db.commit()
     db.refresh(lesson_plan)

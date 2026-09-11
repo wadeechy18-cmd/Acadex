@@ -175,3 +175,35 @@ def get_weekly_plan_items_and_issues(
     items = db.query(WeeklyPlanItem).filter_by(weekly_plan_id=weekly_plan_id).order_by(WeeklyPlanItem.start_time).all()
     views = build_item_views(db, items)
     return views, analyze_week(views)
+
+
+def get_weekly_plan_for_admin(
+    db: Session, admin_user: User, organization_id: uuid.UUID, teacher_user_id: uuid.UUID, week_start_date: date
+) -> WeeklyPlan:
+    """Read-only cross-teacher access for school admins/owners (Phase 9) --
+    the one exception to weekly plans otherwise being private to their owning
+    teacher (see get_weekly_plan above). Never exposed for writes.
+    """
+    assert_org_member(db, admin_user, organization_id, min_role=OrganizationRole.ADMIN)
+    monday = _monday_of(week_start_date)
+
+    plan = (
+        db.query(WeeklyPlan)
+        .filter_by(organization_id=organization_id, teacher_user_id=teacher_user_id, week_start_date=monday)
+        .first()
+    )
+    if not plan:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "No weekly plan exists for that teacher and week.")
+    return plan
+
+
+def get_weekly_plan_items_and_issues_unchecked(
+    db: Session, weekly_plan_id: uuid.UUID
+) -> tuple[list[WeeklyPlanItemView], list[WeeklyPlanIssue]]:
+    """Same as get_weekly_plan_items_and_issues but skips the ownership
+    check -- callers (currently only the admin overview endpoint) must have
+    already authorised access via get_weekly_plan_for_admin.
+    """
+    items = db.query(WeeklyPlanItem).filter_by(weekly_plan_id=weekly_plan_id).order_by(WeeklyPlanItem.start_time).all()
+    views = build_item_views(db, items)
+    return views, analyze_week(views)

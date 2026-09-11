@@ -8,6 +8,7 @@ from app.models.planner_class import YearGroup
 from app.models.resource import ExtractionStatus, Resource, ResourceChunk, ResourceType, ResourceVisibility
 from app.models.user import User
 from app.planning.text_extraction import TextExtractionError, chunk_text, clean_text, extract_text
+from app.services import activity_service
 from app.services.organization_service import assert_org_member
 from app.storage.base import ALLOWED_DOCUMENT_TYPES, MAX_DOCUMENT_SIZE_BYTES, get_storage_backend
 
@@ -76,6 +77,15 @@ def upload_resource(
         resource.extraction_status = ExtractionStatus.FAILED
         resource.extraction_error = str(exc)[:_MAX_ERROR_LENGTH]
 
+    activity_service.log_activity(
+        db,
+        organization_id=organization_id,
+        user_id=user.id,
+        action="resource.uploaded",
+        target_type="resource",
+        target_id=resource.id,
+        summary=resource.file_name,
+    )
     db.commit()
     db.refresh(resource)
     return resource

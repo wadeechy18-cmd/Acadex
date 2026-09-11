@@ -20,6 +20,7 @@ from app.api.v1.endpoints import (
     question_threads,
     quiz,
     resources,
+    school,
     search,
     teacher,
     weekly_plans,
@@ -49,4 +50,5 @@ api_router.include_router(resources.router)
 api_router.include_router(worksheets.router)
 api_router.include_router(homework.router)
 api_router.include_router(weekly_plans.router)
+api_router.include_router(school.router)
 api_router.include_router(ai.router)
