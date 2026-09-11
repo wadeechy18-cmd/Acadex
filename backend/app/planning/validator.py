@@ -44,7 +44,7 @@ class LessonPlanQualityReport(BaseModel):
     issues: list[QualityIssue]
 
 
-def _is_safeguarding_sensitive(topic: str, title: str) -> bool:
+def is_safeguarding_sensitive(topic: str, title: str) -> bool:
     haystack = f"{topic} {title}".lower()
     return any(keyword in haystack for keyword in SAFEGUARDING_KEYWORDS)
 
@@ -78,7 +78,7 @@ def validate_lesson_plan(
     elif not has_assessment_section and not content.assessment_for_learning:
         issues.append(QualityIssue(severity="info", message="No assessment section or assessment-for-learning notes yet."))
 
-    if _is_safeguarding_sensitive(topic, title):
+    if is_safeguarding_sensitive(topic, title):
         issues.append(QualityIssue(severity="info", message=SAFEGUARDING_NOTE))
 
     return LessonPlanQualityReport(timing=timing, issues=issues)

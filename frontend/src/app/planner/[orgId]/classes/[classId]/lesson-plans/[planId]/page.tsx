@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { AIEnhancePanel } from "@/components/planner/AIEnhancePanel";
 import { QualityPanel } from "@/components/planner/QualityPanel";
 import { SortableSection } from "@/components/planner/SortableSection";
 import { StringListEditor } from "@/components/planner/StringListEditor";
@@ -17,6 +18,7 @@ import type {
   LessonPlanQualityReport,
   LessonPlanVersionSummary,
   LessonSection,
+  Resource,
   TimingSuggestion,
 } from "@/types";
 
@@ -52,6 +54,7 @@ export default function LessonPlanEditorPage() {
   const [versions, setVersions] = useState<LessonPlanVersionSummary[]>([]);
   const [showVersions, setShowVersions] = useState(false);
   const [qualityReport, setQualityReport] = useState<LessonPlanQualityReport | null>(null);
+  const [resources, setResources] = useState<Resource[]>([]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
@@ -73,6 +76,15 @@ export default function LessonPlanEditorPage() {
       .finally(() => setDataLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, planId]);
+
+  useEffect(() => {
+    if (!user || user.role !== "teacher" || !orgId) return;
+    apiFetch<Resource[]>(`/organizations/${orgId}/resources`, undefined, true)
+      .then(setResources)
+      .catch(() => {
+        // Non-critical -- the AI panel just shows no resource checklist.
+      });
+  }, [user, orgId]);
 
   const isOwner = !!(plan && user && plan.teacher_user_id === user.id);
 
@@ -240,6 +252,19 @@ export default function LessonPlanEditorPage() {
       {qualityReport && (
         <div className="mt-4">
           <QualityPanel report={qualityReport} onApplySuggestion={applySuggestion} readOnly={!isOwner} />
+        </div>
+      )}
+
+      {isOwner && (
+        <div className="mt-4">
+          <AIEnhancePanel
+            lessonPlanId={planId}
+            resources={resources}
+            onApply={(suggested) => {
+              setContent(suggested);
+              if (plan) checkQuality(plan, suggested);
+            }}
+          />
         </div>
       )}
 

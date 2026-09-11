@@ -14,6 +14,7 @@ from app.models.organization import Organization, OrganizationMember, Organizati
 from app.models.planner_class import TeachingClass, YearGroup
 from app.models.lesson_plan import LessonPlan, LessonPlanVersion, LessonPlanStatus, LessonPlanTemplateType
 from app.models.resource import Resource, ResourceChunk, ResourceType, ResourceVisibility, ExtractionStatus
+from app.models.usage_record import UsageRecord
 
 __all__ = [
     "User",
@@ -76,4 +77,5 @@ __all__ = [
     "ResourceType",
     "ResourceVisibility",
     "ExtractionStatus",
+    "UsageRecord",
 ]

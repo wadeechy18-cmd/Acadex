@@ -28,6 +28,12 @@ class Settings(BaseSettings):
     storage_s3_secret_key: str | None = None
     storage_s3_endpoint_url: str | None = None
 
+    # AI is entirely optional -- leave anthropic_api_key unset and every AI
+    # endpoint responds 503 rather than the app failing to start. See
+    # docs/LESSON_PLANNER_ARCHITECTURE.md section 10.
+    anthropic_api_key: str | None = None
+    ai_model: str = "claude-opus-5"
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]

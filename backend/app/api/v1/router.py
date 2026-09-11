@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
     admin,
+    ai,
     auth,
     classes,
     comments,
@@ -42,3 +43,4 @@ api_router.include_router(organizations.router)
 api_router.include_router(classes.router)
 api_router.include_router(lesson_plans.router)
 api_router.include_router(resources.router)
+api_router.include_router(ai.router)

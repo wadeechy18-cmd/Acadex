@@ -566,6 +566,13 @@ export type ResourceType =
 export type ResourceVisibility = "private" | "organization";
 export type ExtractionStatus = "pending" | "completed" | "failed";
 
+export interface UsageSummary {
+  total_requests: number;
+  total_input_tokens: number;
+  total_output_tokens: number;
+  total_estimated_cost_cents: number;
+}
+
 export interface Resource {
   id: string;
   organization_id: string;
