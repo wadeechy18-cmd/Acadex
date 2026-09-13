@@ -1,20 +1,16 @@
 import type { Metadata } from "next";
-import { AuthProvider } from "@/lib/auth-context";
-import "katex/dist/katex.min.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Acadex — Learn. Practice. Ask. Improve.",
+  title: "Acadex — Smarter Teaching. Better Planning. Less Admin.",
   description:
-    "A free education platform for GCSE, International A-Level, and first-year university Computer Science students.",
+    "Acadex helps teachers create high-quality lesson plans aligned with the English National Curriculum, while helping schools manage teachers, classes, lesson planning and timetable changes.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>
-        <AuthProvider>{children}</AuthProvider>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

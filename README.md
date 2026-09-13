@@ -1,19 +1,17 @@
 # Acadex
 
-A free education platform for GCSE, International A-Level, and first-year
-university Computer Science students — video lessons, notes, practice questions,
-quizzes, past papers, and a student-teacher discussion community, built on an
-architecture that supports future paid content, live classes, and AI tutoring
-without a rewrite.
-
-See `docs/ARCHITECTURE.md`, `docs/DATABASE_SCHEMA.md`, `docs/MILESTONES.md`, and
-`docs/SECURITY.md` for the full design.
+An education SaaS platform with three entry paths — School, Teacher, and (coming soon)
+Student. The first two real products are a **Teacher AI Lesson Plan Builder** aligned to the
+English National Curriculum, and **School Management** covering teachers, classes, lesson
+plan oversight, tasks, timetabling, and deterministic teacher-absence/cover automation.
 
 ## Stack
 
-- **Frontend:** Next.js (App Router), React, TypeScript, Tailwind CSS
+- **Frontend:** Next.js (App Router), React, TypeScript, Tailwind CSS, shadcn/ui
 - **Backend:** Python, FastAPI, SQLAlchemy, Alembic
 - **Database:** PostgreSQL
+- **Scheduling:** Google OR-Tools (CP-SAT) — the timetable/substitution optimizer is
+  deterministic constraint solving, never an LLM call
 
 ## Getting started (local development)
 
@@ -38,8 +36,6 @@ python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env   # then point DATABASE_URL at your local Postgres
 alembic upgrade head
-python -m scripts.create_admin you@example.com "a-strong-password" "Your Name"
-python -m scripts.seed_content   # optional: sample subjects/courses/questions
 uvicorn app.main:app --reload
 ```
 
@@ -62,23 +58,13 @@ pip install -r requirements-dev.txt
 pytest tests/ -v
 ```
 
-See `docs/SECURITY.md` for what the suite covers and what was reviewed by hand.
-
 ## Project layout
 
 ```
 backend/    FastAPI app, SQLAlchemy models, Alembic migrations, pytest suite
 frontend/   Next.js app
-docs/       Architecture, database schema, milestone plan, security review
 ```
 
 ## Status
 
-All 13 milestones are complete: architecture, authentication, the full
-learning hierarchy (levels → exam boards → subjects → courses → chapters →
-topics → lessons), student dashboard/enrollment/progress/bookmarks, video +
-notes, practice questions + quizzes, ask-a-question + discussions, teacher
-and admin dashboards, past papers, search + notifications, an automated test
-+ security review pass, and a deployment runbook (`docs/DEPLOYMENT.md`). See
-`docs/MILESTONES.md` for details and the future live-classes/payments/
-AI-tutor features the schema is already ready for.
+Under active rebuild — see the project's plan document for the current phase.
