@@ -30,3 +30,19 @@ export interface SchoolMember {
   role: SchoolMembershipRole;
   joined_at: string;
 }
+
+export type ResourceKind = "pdf" | "docx" | "pptx" | "image" | "text";
+export type ExtractionStatus = "pending" | "done" | "failed" | "not_applicable";
+
+export interface Resource {
+  id: string;
+  display_name: string;
+  original_filename: string;
+  content_type: string;
+  kind: ResourceKind;
+  file_size_bytes: number;
+  extraction_status: ExtractionStatus;
+  extraction_error: string | null;
+  created_at: string;
+  updated_at: string;
+}

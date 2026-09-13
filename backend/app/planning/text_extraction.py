@@ -9,6 +9,7 @@ import io
 import re
 
 import docx
+from pptx import Presentation
 from pypdf import PdfReader
 
 
@@ -22,6 +23,8 @@ def extract_text(file_bytes: bytes, content_type: str) -> str:
             return _extract_pdf(file_bytes)
         if content_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
             return _extract_docx(file_bytes)
+        if content_type == "application/vnd.openxmlformats-officedocument.presentationml.presentation":
+            return _extract_pptx(file_bytes)
         if content_type == "text/plain":
             return _extract_txt(file_bytes)
     except Exception as exc:  # noqa: BLE001 -- any parser failure becomes a clean, reportable error
@@ -37,6 +40,16 @@ def _extract_pdf(file_bytes: bytes) -> str:
 def _extract_docx(file_bytes: bytes) -> str:
     document = docx.Document(io.BytesIO(file_bytes))
     return "\n\n".join(p.text for p in document.paragraphs if p.text.strip())
+
+
+def _extract_pptx(file_bytes: bytes) -> str:
+    presentation = Presentation(io.BytesIO(file_bytes))
+    slides_text = []
+    for slide in presentation.slides:
+        shape_texts = [shape.text_frame.text for shape in slide.shapes if shape.has_text_frame and shape.text_frame.text.strip()]
+        if shape_texts:
+            slides_text.append("\n".join(shape_texts))
+    return "\n\n".join(slides_text)
 
 
 def _extract_txt(file_bytes: bytes) -> str:

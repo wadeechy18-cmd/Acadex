@@ -9,6 +9,7 @@ from app.models.curriculum import (
     Subject,
     YearGroup,
 )
+from app.models.resource import ExtractionStatus, Resource, ResourceKind
 
 __all__ = [
     "User",
@@ -25,4 +26,7 @@ __all__ = [
     "ProgrammeOfStudy",
     "CurriculumTopic",
     "Objective",
+    "Resource",
+    "ResourceKind",
+    "ExtractionStatus",
 ]

@@ -2,7 +2,6 @@ import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -24,7 +23,10 @@ app = FastAPI(title="Acadex API", version="0.1.0")
 
 if settings.storage_backend == "local":
     os.makedirs(settings.storage_local_path, exist_ok=True)
-    app.mount("/uploads", StaticFiles(directory=settings.storage_local_path), name="uploads")
+# Deliberately no public static mount for storage_local_path: uploaded files
+# (resources, and anything stored here in future) are only ever served
+# through authenticated endpoints that check ownership -- see
+# app/api/v1/endpoints/resources.py's /file route.
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)

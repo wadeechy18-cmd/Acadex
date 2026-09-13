@@ -19,6 +19,7 @@ ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 ALLOWED_DOCUMENT_TYPES = {
     "application/pdf",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",  # .docx
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",  # .pptx
     "text/plain",
 }
 ALLOWED_VIDEO_TYPES = {"video/mp4", "video/webm"}
@@ -32,6 +33,10 @@ class StorageBackend(ABC):
     @abstractmethod
     def save(self, file_bytes: bytes, filename: str, content_type: str, folder: str) -> str:
         """Persist a file and return its storage key."""
+
+    @abstractmethod
+    def load(self, storage_key: str) -> bytes:
+        """Read back a previously saved file's bytes."""
 
     @abstractmethod
     def url_for(self, storage_key: str) -> str:
@@ -61,6 +66,10 @@ class LocalStorageBackend(StorageBackend):
             f.write(file_bytes)
         return key
 
+    def load(self, storage_key: str) -> bytes:
+        with open(self.base_path / storage_key, "rb") as f:
+            return f.read()
+
     def url_for(self, storage_key: str) -> str:
         # Absolute, since the frontend is a separate origin from the API.
         return f"{self.public_base_url}/uploads/{storage_key}"
@@ -83,6 +92,9 @@ class S3StorageBackend(StorageBackend):
         raise NotImplementedError("S3 storage backend is not configured yet.")
 
     def save(self, file_bytes: bytes, filename: str, content_type: str, folder: str) -> str:
+        raise NotImplementedError
+
+    def load(self, storage_key: str) -> bytes:
         raise NotImplementedError
 
     def url_for(self, storage_key: str) -> str:
