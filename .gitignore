@@ -29,3 +29,6 @@ postgres-data/
 
 # Local file storage (StorageBackend local dev target -- runtime data, never committed)
 backend/uploads/
+
+# Scratch Playwright verification scripts (not project source)
+frontend/.pw-scratch/

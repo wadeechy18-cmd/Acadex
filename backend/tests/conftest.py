@@ -65,3 +65,40 @@ def client(db_session):
     app.dependency_overrides[get_db] = override_get_db
     yield TestClient(app)
     app.dependency_overrides.clear()
+
+
+def register_teacher(client: TestClient, email: str | None = None, display_name: str = "Test Teacher") -> dict:
+    import uuid
+
+    email = email or f"teacher.{uuid.uuid4().hex[:10]}@example.com"
+    res = client.post(
+        "/api/v1/auth/register/teacher",
+        json={"email": email, "password": "SuperSecret123", "display_name": display_name},
+    )
+    assert res.status_code == 201, res.text
+    body = res.json()
+    return {"token": body["access_token"], "user": body["user"], "email": email}
+
+
+def register_school(
+    client: TestClient, school_name: str = "Test School", admin_email: str | None = None
+) -> dict:
+    import uuid
+
+    admin_email = admin_email or f"admin.{uuid.uuid4().hex[:10]}@example.com"
+    res = client.post(
+        "/api/v1/auth/register/school",
+        json={
+            "school_name": school_name,
+            "admin_email": admin_email,
+            "admin_password": "SuperSecret123",
+            "admin_display_name": "Test Admin",
+        },
+    )
+    assert res.status_code == 201, res.text
+    body = res.json()
+    return {"token": body["access_token"], "user": body["user"], "school": body["school"], "email": admin_email}
+
+
+def auth_headers(account: dict) -> dict:
+    return {"Authorization": f"Bearer {account['token']}"}
