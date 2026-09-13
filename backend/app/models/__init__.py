@@ -10,6 +10,7 @@ from app.models.curriculum import (
     YearGroup,
 )
 from app.models.resource import ExtractionStatus, Resource, ResourceKind
+from app.models.lesson_plan import AbilityLevel, GenerationKind, LessonPlan, LessonPlanVersion, LessonPlanVersionResource
 
 __all__ = [
     "User",
@@ -29,4 +30,9 @@ __all__ = [
     "Resource",
     "ResourceKind",
     "ExtractionStatus",
+    "LessonPlan",
+    "LessonPlanVersion",
+    "LessonPlanVersionResource",
+    "AbilityLevel",
+    "GenerationKind",
 ]
