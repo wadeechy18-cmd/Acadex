@@ -39,6 +39,11 @@ def list_subjects(year_group_id: uuid.UUID, db: Session = Depends(get_db), _: Us
     return curriculum_service.list_subjects_for_year_group(db, year_group_id)
 
 
+@router.get("/curricula/{curriculum_id}/subjects", response_model=list[SubjectResponse])
+def list_all_subjects(curriculum_id: uuid.UUID, db: Session = Depends(get_db), _: User = Depends(get_current_user)) -> list[SubjectResponse]:
+    return curriculum_service.list_subjects_for_curriculum(db, curriculum_id)
+
+
 @router.get("/topics", response_model=list[CurriculumTopicResponse])
 def list_topics(
     subject_id: uuid.UUID, year_group_id: uuid.UUID, db: Session = Depends(get_db), _: User = Depends(get_current_user)

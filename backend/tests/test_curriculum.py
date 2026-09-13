@@ -67,6 +67,10 @@ def test_full_browse_chain(client, db_session):
     assert subjects.status_code == 200
     assert [s["code"] for s in subjects.json()] == ["MATHS"]
 
+    all_subjects = client.get(f"/api/v1/curriculum/curricula/{seed['curriculum'].id}/subjects", headers=headers)
+    assert all_subjects.status_code == 200
+    assert [s["code"] for s in all_subjects.json()] == ["MATHS"]
+
     topics = client.get(
         "/api/v1/curriculum/topics",
         params={"subject_id": str(seed["subject"].id), "year_group_id": str(seed["year_group"].id)},

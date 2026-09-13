@@ -36,3 +36,33 @@ def test_a_teacher_cannot_see_or_modify_another_teachers_class(client):
 
 def test_classes_endpoints_require_authentication(client):
     assert client.get("/api/v1/classes").status_code == 401
+
+
+def test_school_admin_can_list_classes_owned_by_teachers_in_their_school(client):
+    from tests.conftest import register_school
+
+    admin = register_school(client, school_name="Classes Oversight School")
+    teacher = register_teacher(client)
+    school_id = admin["school"]["id"]
+    client.post(f"/api/v1/schools/{school_id}/members", json={"email": teacher["email"], "role": "teacher"}, headers=auth_headers(admin))
+
+    client.post("/api/v1/classes", json={"name": "Year 3B"}, headers=auth_headers(teacher))
+
+    listing = client.get(f"/api/v1/schools/{school_id}/classes", headers=auth_headers(admin))
+    assert listing.status_code == 200
+    assert len(listing.json()) == 1
+    assert listing.json()[0]["name"] == "Year 3B"
+
+
+def test_school_admin_cannot_list_classes_from_another_school(client):
+    from tests.conftest import register_school
+
+    admin_a = register_school(client, school_name="Classes School A")
+    teacher_a = register_teacher(client)
+    school_a = admin_a["school"]["id"]
+    client.post(f"/api/v1/schools/{school_a}/members", json={"email": teacher_a["email"], "role": "teacher"}, headers=auth_headers(admin_a))
+    client.post("/api/v1/classes", json={"name": "Year 4A"}, headers=auth_headers(teacher_a))
+
+    admin_b = register_school(client, school_name="Classes School B")
+    listing = client.get(f"/api/v1/schools/{school_a}/classes", headers=auth_headers(admin_b))
+    assert listing.status_code == 403

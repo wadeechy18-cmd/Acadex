@@ -12,6 +12,7 @@ from app.schemas.class_ import ClassCreateRequest, ClassResponse, ClassUpdateReq
 from app.services import class_service
 
 router = APIRouter(prefix="/classes", tags=["classes"])
+school_classes_router = APIRouter(prefix="/schools", tags=["classes"])
 
 
 def _to_response(db: Session, class_: Class) -> ClassResponse:
@@ -49,3 +50,8 @@ def update_class(
 @router.delete("/{class_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_class(class_id: uuid.UUID, db: Session = Depends(get_db), user: User = Depends(get_current_user)) -> None:
     class_service.delete_class(db, user, class_id)
+
+
+@school_classes_router.get("/{school_id}/classes", response_model=list[ClassResponse])
+def list_school_classes(school_id: uuid.UUID, db: Session = Depends(get_db), user: User = Depends(get_current_user)) -> list[ClassResponse]:
+    return [_to_response(db, c) for c in class_service.list_school_classes(db, user, school_id)]

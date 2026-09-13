@@ -13,6 +13,16 @@ from app.models.resource import ExtractionStatus, Resource, ResourceKind
 from app.models.lesson_plan import AbilityLevel, GenerationKind, LessonPlan, LessonPlanVersion, LessonPlanVersionResource
 from app.models.class_ import Class
 from app.models.task import Task, TaskPriority, TaskStatus
+from app.models.timetable import (
+    AcademicYear,
+    AvailabilityStatus,
+    Room,
+    TeacherAvailability,
+    TeacherSubjectQualification,
+    TimeSlot,
+    Timetable,
+    TimetableEntry,
+)
 
 __all__ = [
     "User",
@@ -41,4 +51,12 @@ __all__ = [
     "Task",
     "TaskPriority",
     "TaskStatus",
+    "AcademicYear",
+    "Room",
+    "TimeSlot",
+    "Timetable",
+    "TimetableEntry",
+    "TeacherSubjectQualification",
+    "TeacherAvailability",
+    "AvailabilityStatus",
 ]

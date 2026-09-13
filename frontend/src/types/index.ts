@@ -196,3 +196,51 @@ export interface Task {
   effective_status: EffectiveTaskStatus;
   created_at: string;
 }
+
+export interface AcademicYear {
+  id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+}
+
+export interface Room {
+  id: string;
+  name: string;
+  capacity: number | null;
+}
+
+export interface TimeSlot {
+  id: string;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  label: string;
+}
+
+export interface TimetableSummary {
+  id: string;
+  academic_year_id: string;
+  name: string;
+}
+
+export interface TimetableEntry {
+  id: string;
+  time_slot_id: string;
+  teacher_user_id: string;
+  teacher_name: string;
+  subject_id: string;
+  subject_name: string;
+  class_id: string | null;
+  class_name: string | null;
+  room_id: string | null;
+  room_name: string | null;
+}
+
+export type AvailabilityStatus = "available" | "unavailable";
+
+export interface Qualification {
+  id: string;
+  subject_id: string;
+  subject_name: string;
+}

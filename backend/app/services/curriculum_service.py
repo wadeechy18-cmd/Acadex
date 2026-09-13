@@ -18,6 +18,14 @@ def list_year_groups(db: Session, key_stage_id: uuid.UUID) -> list[YearGroup]:
     return db.query(YearGroup).filter_by(key_stage_id=key_stage_id).order_by(YearGroup.sort_order).all()
 
 
+def list_subjects_for_curriculum(db: Session, curriculum_id: uuid.UUID) -> list[Subject]:
+    """Every subject in a curriculum, regardless of year group -- used
+    where a year-group-scoped picker isn't the right fit (e.g. choosing a
+    subject for a timetable entry).
+    """
+    return db.query(Subject).filter_by(curriculum_id=curriculum_id).order_by(Subject.name).all()
+
+
 def list_subjects_for_year_group(db: Session, year_group_id: uuid.UUID) -> list[Subject]:
     """Only subjects that actually have a programme of study for this year
     group -- e.g. a Reception year group only offers the seven EYFS areas
