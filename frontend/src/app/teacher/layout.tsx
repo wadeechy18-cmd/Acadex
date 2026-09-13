@@ -13,6 +13,8 @@ const NAV_ITEMS = [
   { href: "/teacher/resources", label: "Resources" },
   { href: "/teacher/classes", label: "Classes" },
   { href: "/teacher/tasks", label: "Tasks" },
+  { href: "/teacher/cover", label: "Cover" },
+  { href: "/teacher/notifications", label: "Notifications" },
   { href: "/teacher/calendar", label: "Calendar" },
   { href: "/teacher/settings", label: "Settings" },
 ];

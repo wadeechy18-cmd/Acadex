@@ -267,3 +267,51 @@ export interface TeacherAbsence {
   affected_lessons: AffectedLesson[];
   created_at: string;
 }
+
+export type SubstitutionPlanStatus = "proposed" | "approved" | "rejected";
+export type AssignmentStatus = "assigned" | "unfilled";
+
+export interface SubstitutionAssignment {
+  id: string;
+  affected_lesson_id: string;
+  subject_name: string;
+  time_slot_label: string;
+  status: AssignmentStatus;
+  substitute_teacher_user_id: string | null;
+  substitute_teacher_name: string | null;
+  reason: string | null;
+}
+
+export interface SubstitutionPlan {
+  id: string;
+  teacher_absence_id: string;
+  status: SubstitutionPlanStatus;
+  assignments: SubstitutionAssignment[];
+  approved_by_name: string | null;
+  approved_at: string | null;
+  created_at: string;
+}
+
+export interface TimetableExceptionCover {
+  id: string;
+  date: string;
+  timetable_entry_id: string;
+  subject_name: string;
+  time_slot_label: string;
+  class_name: string | null;
+  room_name: string | null;
+  original_teacher_name: string;
+  substitute_teacher_user_id: string | null;
+  substitute_teacher_name: string | null;
+  cover_lesson_plan_id: string | null;
+  cover_lesson_plan_title: string | null;
+  cover_lesson_plan_message: string | null;
+}
+
+export interface Notification {
+  id: string;
+  title: string;
+  body: string;
+  read_at: string | null;
+  created_at: string;
+}

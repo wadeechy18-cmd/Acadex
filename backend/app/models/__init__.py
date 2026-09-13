@@ -24,6 +24,14 @@ from app.models.timetable import (
     TimetableEntry,
 )
 from app.models.absence import AffectedLesson, TeacherAbsence
+from app.models.substitution import (
+    AssignmentStatus,
+    Notification,
+    SubstitutionAssignment,
+    SubstitutionPlan,
+    SubstitutionPlanStatus,
+    TimetableException,
+)
 
 __all__ = [
     "User",
@@ -62,4 +70,10 @@ __all__ = [
     "AvailabilityStatus",
     "TeacherAbsence",
     "AffectedLesson",
+    "SubstitutionPlan",
+    "SubstitutionPlanStatus",
+    "SubstitutionAssignment",
+    "AssignmentStatus",
+    "TimetableException",
+    "Notification",
 ]
