@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.models.school import School, SchoolMembership, SchoolMembershipRole
 from app.models.user import User, UserRole
+from app.services import audit_service
 
 _ROLE_RANK = {SchoolMembershipRole.TEACHER: 0, SchoolMembershipRole.ADMIN: 1}
 
@@ -62,6 +63,7 @@ def add_member(db: Session, actor: User, school_id: uuid.UUID, email: str, role:
 
     member = SchoolMembership(school_id=school_id, user_id=target.id, role=role)
     db.add(member)
+    audit_service.log(db, actor, school_id, "member.add", {"email": email, "role": role.value})
     db.commit()
     db.refresh(member)
     return member
@@ -93,4 +95,5 @@ def remove_member(db: Session, actor: User, school_id: uuid.UUID, member_id: uui
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "A school must always have at least one admin.")
 
     db.delete(member)
+    audit_service.log(db, actor, school_id, "member.remove", {"member_id": str(member_id), "role": member.role.value})
     db.commit()

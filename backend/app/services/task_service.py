@@ -10,7 +10,7 @@ from app.models.school import SchoolMembershipRole
 from app.models.task import Task, TaskStatus
 from app.models.user import User
 from app.schemas.task import TaskCreateRequest, TaskUpdateRequest
-from app.services import school_service
+from app.services import audit_service, school_service
 
 
 def effective_status(task: Task) -> str:
@@ -45,6 +45,8 @@ def create_task(db: Session, actor: User, school_id: uuid.UUID, payload: TaskCre
         priority=payload.priority,
     )
     db.add(task)
+    db.flush()
+    audit_service.log(db, actor, school_id, "task.create", {"task_id": str(task.id), "title": task.title})
     db.commit()
     db.refresh(task)
     return task
@@ -79,6 +81,7 @@ def update_task(db: Session, actor: User, school_id: uuid.UUID, task_id: uuid.UU
     task.deadline = payload.deadline
     task.priority = payload.priority
     task.status = payload.status
+    audit_service.log(db, actor, school_id, "task.update", {"task_id": str(task.id)})
     db.commit()
     db.refresh(task)
     return task
@@ -87,6 +90,7 @@ def update_task(db: Session, actor: User, school_id: uuid.UUID, task_id: uuid.UU
 def delete_task(db: Session, actor: User, school_id: uuid.UUID, task_id: uuid.UUID) -> None:
     task = get_school_task(db, actor, school_id, task_id)
     db.delete(task)
+    audit_service.log(db, actor, school_id, "task.delete", {"task_id": str(task_id), "title": task.title})
     db.commit()
 
 

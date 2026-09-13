@@ -13,7 +13,7 @@ from app.models.timetable import AvailabilityStatus, TeacherAvailability, Teache
 from app.models.lesson_plan import LessonPlan
 from app.models.user import User
 from app.planning.substitution_optimizer import CoverCandidate, LessonToCover, optimize_substitutions
-from app.services import absence_service, auth_service, school_service
+from app.services import absence_service, audit_service, auth_service, school_service
 
 _RECENT_COVER_WINDOW_DAYS = 30
 
@@ -190,6 +190,7 @@ def reassign(db: Session, actor: User, school_id: uuid.UUID, assignment_id: uuid
         assignment.substitute_teacher_user_id = None
         assignment.reason = "Manually unassigned by school admin."
 
+    audit_service.log(db, actor, school_id, "substitution_assignment.reassign", {"assignment_id": str(assignment_id), "new_teacher_id": str(new_teacher_id) if new_teacher_id else None})
     db.commit()
     db.refresh(assignment)
     return assignment
@@ -228,6 +229,7 @@ def approve_plan(db: Session, actor: User, school_id: uuid.UUID, plan_id: uuid.U
     plan.status = SubstitutionPlanStatus.APPROVED
     plan.approved_by_user_id = actor.id
     plan.approved_at = datetime.now(timezone.utc)
+    audit_service.log(db, actor, school_id, "substitution_plan.approve", {"plan_id": str(plan.id)})
     db.commit()
     db.refresh(plan)
     return plan
@@ -238,6 +240,7 @@ def reject_plan(db: Session, actor: User, school_id: uuid.UUID, plan_id: uuid.UU
     if plan.status != SubstitutionPlanStatus.PROPOSED:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Only a proposed plan can be rejected.")
     plan.status = SubstitutionPlanStatus.REJECTED
+    audit_service.log(db, actor, school_id, "substitution_plan.reject", {"plan_id": str(plan.id)})
     db.commit()
     db.refresh(plan)
     return plan

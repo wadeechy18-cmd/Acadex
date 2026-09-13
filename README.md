@@ -65,6 +65,19 @@ backend/    FastAPI app, SQLAlchemy models, Alembic migrations, pytest suite
 frontend/   Next.js app
 ```
 
+## Architecture
+
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full system design:
+multi-tenancy, database schema, the AI Lesson Plan Builder, and the OR-Tools
+timetable/absence/cover-substitution workflow.
+
 ## Status
 
-Under active rebuild — see the project's plan document for the current phase.
+The core rebuild is complete: identity & multi-tenancy, the England/English
+National Curriculum hierarchy, teacher resources, the AI Lesson Plan Builder
+(generation, versioning, section regeneration, export), classes/tasks/lesson
+plan library search, the timetable grid with qualifications and
+availability, absence detection, and the OR-Tools substitution optimizer
+with admin approval. A handful of sidebar links remain unbuilt placeholders
+(`/teacher/calendar`, `/teacher/settings`, `/school/subjects`) — see
+`docs/ARCHITECTURE.md`'s "Known simplifications" section.

@@ -32,6 +32,7 @@ from app.models.substitution import (
     SubstitutionPlanStatus,
     TimetableException,
 )
+from app.models.audit_log import AuditLog
 
 __all__ = [
     "User",
@@ -76,4 +77,5 @@ __all__ = [
     "AssignmentStatus",
     "TimetableException",
     "Notification",
+    "AuditLog",
 ]

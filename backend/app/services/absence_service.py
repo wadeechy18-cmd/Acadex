@@ -8,7 +8,7 @@ from app.models.absence import AffectedLesson, TeacherAbsence
 from app.models.school import SchoolMembershipRole
 from app.models.timetable import AcademicYear, TimeSlot, Timetable, TimetableEntry
 from app.models.user import User
-from app.services import school_service
+from app.services import audit_service, school_service
 
 
 def _compute_affected_entries(db: Session, school_id: uuid.UUID, teacher_user_id: uuid.UUID, absence_date: date) -> list[TimetableEntry]:
@@ -59,6 +59,7 @@ def report_absence(db: Session, actor: User, school_id: uuid.UUID, teacher_user_
     for entry in _compute_affected_entries(db, school_id, teacher_user_id, absence_date):
         db.add(AffectedLesson(teacher_absence_id=absence.id, timetable_entry_id=entry.id))
 
+    audit_service.log(db, actor, school_id, "absence.report", {"teacher_user_id": str(teacher_user_id), "date": absence_date.isoformat()})
     db.commit()
     db.refresh(absence)
     return absence
@@ -87,4 +88,5 @@ def list_affected_lessons(db: Session, absence: TeacherAbsence) -> list[Affected
 def delete_absence(db: Session, actor: User, school_id: uuid.UUID, absence_id: uuid.UUID) -> None:
     absence = get_absence(db, actor, school_id, absence_id)
     db.delete(absence)
+    audit_service.log(db, actor, school_id, "absence.delete", {"absence_id": str(absence_id)})
     db.commit()

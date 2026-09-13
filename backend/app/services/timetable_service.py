@@ -18,7 +18,7 @@ from app.models.timetable import (
 )
 from app.models.user import User
 from app.schemas.timetable import AcademicYearCreateRequest, RoomCreateRequest, TimeSlotCreateRequest, TimetableCreateRequest, TimetableEntryUpsertRequest
-from app.services import school_service
+from app.services import audit_service, school_service
 
 
 def _assert_admin(db: Session, actor: User, school_id: uuid.UUID) -> None:
@@ -191,6 +191,8 @@ def create_entry(db: Session, actor: User, school_id: uuid.UUID, timetable_id: u
         room_id=payload.room_id,
     )
     db.add(entry)
+    db.flush()
+    audit_service.log(db, actor, school_id, "timetable_entry.create", {"entry_id": str(entry.id), "timetable_id": str(timetable_id)})
     db.commit()
     db.refresh(entry)
     return entry
@@ -213,6 +215,7 @@ def update_entry(
     entry.subject_id = payload.subject_id
     entry.class_id = payload.class_id
     entry.room_id = payload.room_id
+    audit_service.log(db, actor, school_id, "timetable_entry.update", {"entry_id": str(entry.id)})
     db.commit()
     db.refresh(entry)
     return entry
@@ -225,6 +228,7 @@ def delete_entry(db: Session, actor: User, school_id: uuid.UUID, timetable_id: u
     if not entry:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Timetable entry not found.")
     db.delete(entry)
+    audit_service.log(db, actor, school_id, "timetable_entry.delete", {"entry_id": str(entry_id)})
     db.commit()
 
 
