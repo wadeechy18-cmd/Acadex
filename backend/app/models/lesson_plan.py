@@ -32,6 +32,13 @@ class LessonPlan(UUIDPKMixin, TimestampMixin, Base):
     owner_user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
+    # Stamped from the teacher's school membership at creation time (null if
+    # they have none) so a school admin can later browse lesson plans
+    # created within their own school -- see assert_school_member.
+    school_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("schools.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    class_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("classes.id", ondelete="SET NULL"), nullable=True)
     subject_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("subjects.id"), nullable=False, index=True)
     year_group_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("year_groups.id"), nullable=False, index=True)
     curriculum_topic_id: Mapped[uuid.UUID | None] = mapped_column(

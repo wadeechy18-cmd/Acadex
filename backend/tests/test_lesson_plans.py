@@ -6,7 +6,7 @@ from app.ai.provider import AIGenerationResult, AIProvider, get_ai_provider
 from app.main import app
 from app.models.curriculum import Curriculum, CurriculumTopic, KeyStage, Objective, ProgrammeOfStudy, Subject, YearGroup
 from app.schemas.lesson_plan_content import Differentiation, LessonPlanContent, TimelineEntry
-from tests.conftest import auth_headers, register_teacher
+from tests.conftest import auth_headers, register_school, register_teacher
 
 SAMPLE_CONTENT = LessonPlanContent(
     title="Fractions: Halves and Quarters",
@@ -339,3 +339,116 @@ def test_generation_uses_a_teachers_own_resource_as_context(client, db_session, 
 
 def test_lesson_plan_endpoints_require_authentication(client):
     assert client.get("/api/v1/lesson-plans").status_code == 401
+
+
+def test_library_can_be_filtered_by_subject_year_group_and_topic(client, db_session):
+    seed = _seed_curriculum(db_session)
+    teacher = register_teacher(client)
+    plan = _create_plan(client, seed, teacher)
+    headers = auth_headers(teacher)
+
+    matching = client.get(
+        "/api/v1/lesson-plans", params={"subject_id": str(seed["subject"].id), "topic": "fraction"}, headers=headers
+    )
+    assert len(matching.json()) == 1
+
+    no_match = client.get("/api/v1/lesson-plans", params={"topic": "grammar"}, headers=headers)
+    assert no_match.json() == []
+
+
+def test_assigning_a_lesson_plan_to_a_class(client, db_session):
+    seed = _seed_curriculum(db_session)
+    teacher = register_teacher(client)
+    headers = auth_headers(teacher)
+    plan = _create_plan(client, seed, teacher)
+
+    class_res = client.post("/api/v1/classes", json={"name": "Year 2A"}, headers=headers)
+    class_id = class_res.json()["id"]
+
+    assign = client.patch(f"/api/v1/lesson-plans/{plan['id']}/assign", json={"class_id": class_id}, headers=headers)
+    assert assign.status_code == 200
+    assert assign.json()["class_name"] == "Year 2A"
+
+    filtered = client.get("/api/v1/lesson-plans", params={"class_id": class_id}, headers=headers)
+    assert len(filtered.json()) == 1
+
+    unassign = client.patch(f"/api/v1/lesson-plans/{plan['id']}/assign", json={"class_id": None}, headers=headers)
+    assert unassign.json()["class_name"] is None
+
+
+def test_cannot_assign_a_lesson_plan_to_another_teachers_class(client, db_session):
+    seed = _seed_curriculum(db_session)
+    teacher = register_teacher(client)
+    other = register_teacher(client)
+    plan = _create_plan(client, seed, teacher)
+
+    other_class = client.post("/api/v1/classes", json={"name": "Not yours"}, headers=auth_headers(other))
+    res = client.patch(
+        f"/api/v1/lesson-plans/{plan['id']}/assign", json={"class_id": other_class.json()["id"]}, headers=auth_headers(teacher)
+    )
+    assert res.status_code == 404
+
+
+def test_school_admin_can_browse_lesson_plans_created_within_their_school(client, db_session):
+    seed = _seed_curriculum(db_session)
+    admin = register_school(client, school_name="Oversight School")
+    teacher = register_teacher(client)
+    school_id = admin["school"]["id"]
+    client.post(f"/api/v1/schools/{school_id}/members", json={"email": teacher["email"], "role": "teacher"}, headers=auth_headers(admin))
+
+    _create_plan(client, seed, teacher)
+
+    listing = client.get(f"/api/v1/schools/{school_id}/lesson-plans", headers=auth_headers(admin))
+    assert listing.status_code == 200
+    assert len(listing.json()) == 1
+    assert listing.json()[0]["owner_display_name"] == "Test Teacher"
+
+
+def test_school_admin_cannot_browse_lesson_plans_from_a_different_school(client, db_session):
+    seed = _seed_curriculum(db_session)
+    admin_a = register_school(client, school_name="School A Oversight")
+    teacher_a = register_teacher(client)
+    school_a = admin_a["school"]["id"]
+    client.post(f"/api/v1/schools/{school_a}/members", json={"email": teacher_a["email"], "role": "teacher"}, headers=auth_headers(admin_a))
+    _create_plan(client, seed, teacher_a)
+
+    admin_b = register_school(client, school_name="School B Oversight")
+    res = client.get(f"/api/v1/schools/{school_a}/lesson-plans", headers=auth_headers(admin_b))
+    assert res.status_code == 403
+
+
+def test_school_admin_can_view_a_single_lesson_plan_in_their_school(client, db_session):
+    seed = _seed_curriculum(db_session)
+    admin = register_school(client, school_name="View School")
+    teacher = register_teacher(client)
+    school_id = admin["school"]["id"]
+    client.post(f"/api/v1/schools/{school_id}/members", json={"email": teacher["email"], "role": "teacher"}, headers=auth_headers(admin))
+    plan = _create_plan(client, seed, teacher)
+
+    res = client.get(f"/api/v1/schools/{school_id}/lesson-plans/{plan['id']}", headers=auth_headers(admin))
+    assert res.status_code == 200
+    assert res.json()["current_version"]["content"]["title"] == SAMPLE_CONTENT.title
+
+
+def test_school_admin_cannot_view_a_lesson_plan_from_another_school(client, db_session):
+    seed = _seed_curriculum(db_session)
+    admin_a = register_school(client, school_name="View School A")
+    teacher_a = register_teacher(client)
+    school_a = admin_a["school"]["id"]
+    client.post(f"/api/v1/schools/{school_a}/members", json={"email": teacher_a["email"], "role": "teacher"}, headers=auth_headers(admin_a))
+    plan = _create_plan(client, seed, teacher_a)
+
+    admin_b = register_school(client, school_name="View School B")
+    res = client.get(f"/api/v1/schools/{admin_b['school']['id']}/lesson-plans/{plan['id']}", headers=auth_headers(admin_b))
+    assert res.status_code == 404
+
+
+def test_a_lesson_plan_created_by_a_teacher_with_no_school_has_no_school_id(client, db_session):
+    seed = _seed_curriculum(db_session)
+    teacher = register_teacher(client)
+    plan = _create_plan(client, seed, teacher)
+    # No direct field exposed on LessonPlanResponse for school_id today, but
+    # a school admin from an unrelated school must still never see it.
+    admin = register_school(client, school_name="Unrelated School")
+    res = client.get(f"/api/v1/schools/{admin['school']['id']}/lesson-plans", headers=auth_headers(admin))
+    assert res.json() == []

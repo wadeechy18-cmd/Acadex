@@ -1,4 +1,5 @@
 import uuid
+from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import Response
@@ -9,10 +10,12 @@ from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.export.docx import render_lesson_plan_docx
 from app.export.pdf import render_lesson_plan_pdf
+from app.models.class_ import Class
 from app.models.curriculum import Subject, YearGroup
 from app.models.lesson_plan import LessonPlan, LessonPlanVersion
 from app.models.user import User
 from app.schemas.lesson_plan import (
+    AssignClassRequest,
     GenerateLessonPlanRequest,
     LessonPlanResponse,
     LessonPlanSummaryResponse,
@@ -21,9 +24,10 @@ from app.schemas.lesson_plan import (
     SaveVersionRequest,
 )
 from app.schemas.lesson_plan_content import REGENERATABLE_SECTIONS, LessonPlanContent
-from app.services import lesson_plan_service
+from app.services import auth_service, lesson_plan_service
 
 router = APIRouter(prefix="/lesson-plans", tags=["lesson-plans"])
+school_lesson_plans_router = APIRouter(prefix="/schools", tags=["lesson-plans"])
 
 
 def _safe_header_filename(name: str) -> str:
@@ -53,6 +57,7 @@ def _version_response(db: Session, version: LessonPlanVersion) -> LessonPlanVers
 def _plan_response(db: Session, plan: LessonPlan) -> LessonPlanResponse:
     subject = db.get(Subject, plan.subject_id)
     year_group = db.get(YearGroup, plan.year_group_id)
+    class_ = db.get(Class, plan.class_id) if plan.class_id else None
     current = lesson_plan_service.get_current_version(db, plan)
     return LessonPlanResponse(
         id=plan.id,
@@ -63,6 +68,8 @@ def _plan_response(db: Session, plan: LessonPlan) -> LessonPlanResponse:
         topic_title=plan.topic_title,
         duration_minutes=plan.duration_minutes,
         ability_level=plan.ability_level,
+        class_id=plan.class_id,
+        class_name=class_.name if class_ else None,
         created_at=plan.created_at,
         current_version=_version_response(db, current),
     )
@@ -71,14 +78,21 @@ def _plan_response(db: Session, plan: LessonPlan) -> LessonPlanResponse:
 def _summary_response(db: Session, plan: LessonPlan) -> LessonPlanSummaryResponse:
     subject = db.get(Subject, plan.subject_id)
     year_group = db.get(YearGroup, plan.year_group_id)
+    class_ = db.get(Class, plan.class_id) if plan.class_id else None
+    owner = db.get(User, plan.owner_user_id)
     current = lesson_plan_service.get_current_version(db, plan)
     return LessonPlanSummaryResponse(
         id=plan.id,
+        subject_id=plan.subject_id,
         subject_name=subject.name,
+        year_group_id=plan.year_group_id,
         year_group_name=year_group.name,
         topic_title=plan.topic_title,
         duration_minutes=plan.duration_minutes,
         ability_level=plan.ability_level,
+        class_id=plan.class_id,
+        class_name=class_.name if class_ else None,
+        owner_display_name=auth_service.get_display_name(db, owner),
         current_version_number=current.version_number,
         updated_at=plan.updated_at,
     )
@@ -96,8 +110,29 @@ def generate(
 
 
 @router.get("", response_model=list[LessonPlanSummaryResponse])
-def list_plans(db: Session = Depends(get_db), user: User = Depends(get_current_user)) -> list[LessonPlanSummaryResponse]:
-    return [_summary_response(db, p) for p in lesson_plan_service.list_plans(db, user)]
+def list_plans(
+    subject_id: uuid.UUID | None = None,
+    year_group_id: uuid.UUID | None = None,
+    topic: str | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    class_id: uuid.UUID | None = None,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> list[LessonPlanSummaryResponse]:
+    plans = lesson_plan_service.list_plans(
+        db, user, subject_id=subject_id, year_group_id=year_group_id, topic=topic, date_from=date_from, date_to=date_to, class_id=class_id
+    )
+    return [_summary_response(db, p) for p in plans]
+
+
+@router.patch("/{plan_id}/assign", response_model=LessonPlanResponse)
+def assign_class(
+    plan_id: uuid.UUID, payload: AssignClassRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+) -> LessonPlanResponse:
+    plan = lesson_plan_service.get_owned_plan(db, user, plan_id)
+    plan = lesson_plan_service.assign_class(db, user, plan, payload.class_id)
+    return _plan_response(db, plan)
 
 
 @router.get("/{plan_id}", response_model=LessonPlanResponse)
@@ -203,3 +238,33 @@ def export_docx(plan_id: uuid.UUID, version_id: uuid.UUID, db: Session = Depends
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         headers={"Content-Disposition": f'attachment; filename="{_safe_header_filename(content.title)}.docx"'},
     )
+
+
+@school_lesson_plans_router.get("/{school_id}/lesson-plans", response_model=list[LessonPlanSummaryResponse])
+def list_school_lesson_plans(
+    school_id: uuid.UUID,
+    subject_id: uuid.UUID | None = None,
+    year_group_id: uuid.UUID | None = None,
+    topic: str | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    class_id: uuid.UUID | None = None,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> list[LessonPlanSummaryResponse]:
+    """Read-only: a school admin browsing lesson plans created by teachers
+    in their own school. Never reaches across school boundaries -- see
+    lesson_plan_service.list_school_plans's assert_school_member call.
+    """
+    plans = lesson_plan_service.list_school_plans(
+        db, user, school_id, subject_id=subject_id, year_group_id=year_group_id, topic=topic, date_from=date_from, date_to=date_to, class_id=class_id
+    )
+    return [_summary_response(db, p) for p in plans]
+
+
+@school_lesson_plans_router.get("/{school_id}/lesson-plans/{plan_id}", response_model=LessonPlanResponse)
+def get_school_lesson_plan(
+    school_id: uuid.UUID, plan_id: uuid.UUID, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+) -> LessonPlanResponse:
+    plan = lesson_plan_service.get_school_plan(db, user, school_id, plan_id)
+    return _plan_response(db, plan)

@@ -11,6 +11,8 @@ from app.models.curriculum import (
 )
 from app.models.resource import ExtractionStatus, Resource, ResourceKind
 from app.models.lesson_plan import AbilityLevel, GenerationKind, LessonPlan, LessonPlanVersion, LessonPlanVersionResource
+from app.models.class_ import Class
+from app.models.task import Task, TaskPriority, TaskStatus
 
 __all__ = [
     "User",
@@ -35,4 +37,8 @@ __all__ = [
     "LessonPlanVersionResource",
     "AbilityLevel",
     "GenerationKind",
+    "Class",
+    "Task",
+    "TaskPriority",
+    "TaskStatus",
 ]

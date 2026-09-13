@@ -27,6 +27,10 @@ class SaveVersionRequest(BaseModel):
     content: LessonPlanContent
 
 
+class AssignClassRequest(BaseModel):
+    class_id: uuid.UUID | None = None
+
+
 class LessonPlanVersionResponse(BaseModel):
     id: uuid.UUID
     version_number: int
@@ -48,16 +52,23 @@ class LessonPlanResponse(BaseModel):
     topic_title: str
     duration_minutes: int
     ability_level: AbilityLevel
+    class_id: uuid.UUID | None
+    class_name: str | None
     created_at: datetime
     current_version: LessonPlanVersionResponse
 
 
 class LessonPlanSummaryResponse(BaseModel):
     id: uuid.UUID
+    subject_id: uuid.UUID
     subject_name: str
+    year_group_id: uuid.UUID
     year_group_name: str
     topic_title: str
     duration_minutes: int
     ability_level: AbilityLevel
+    class_id: uuid.UUID | None
+    class_name: str | None
+    owner_display_name: str
     current_version_number: int
     updated_at: datetime

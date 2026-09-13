@@ -145,17 +145,54 @@ export interface LessonPlan {
   topic_title: string;
   duration_minutes: number;
   ability_level: AbilityLevel;
+  class_id: string | null;
+  class_name: string | null;
   created_at: string;
   current_version: LessonPlanVersion;
 }
 
 export interface LessonPlanSummary {
   id: string;
+  subject_id: string;
   subject_name: string;
+  year_group_id: string;
   year_group_name: string;
   topic_title: string;
   duration_minutes: number;
   ability_level: AbilityLevel;
+  class_id: string | null;
+  class_name: string | null;
+  owner_display_name: string;
   current_version_number: number;
   updated_at: string;
+}
+
+export interface ClassSummary {
+  id: string;
+  name: string;
+  subject_id: string | null;
+  subject_name: string | null;
+  year_group_id: string | null;
+  year_group_name: string | null;
+}
+
+export type TaskPriority = "low" | "medium" | "high";
+export type TaskStatus = "pending" | "in_progress" | "completed";
+export type EffectiveTaskStatus = TaskStatus | "overdue";
+
+export interface Task {
+  id: string;
+  title: string;
+  description: string | null;
+  assigned_to_user_id: string;
+  assigned_to_name: string;
+  subject_id: string | null;
+  subject_name: string | null;
+  class_id: string | null;
+  class_name: string | null;
+  deadline: string;
+  priority: TaskPriority;
+  status: TaskStatus;
+  effective_status: EffectiveTaskStatus;
+  created_at: string;
 }

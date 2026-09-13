@@ -1,20 +1,24 @@
 import json
 import uuid
+from datetime import date
 
 from fastapi import HTTPException, status
 from pydantic import create_model
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Query, Session
 
 from app.ai.provider import AIProvider
+from app.models.class_ import Class
 from app.models.curriculum import Curriculum, CurriculumTopic, KeyStage, Objective, Subject, YearGroup
 from app.models.lesson_plan import GenerationKind, LessonPlan, LessonPlanVersion, LessonPlanVersionResource
 from app.models.resource import Resource
+from app.models.school import SchoolMembershipRole
 from app.models.user import User
 from app.planning.lesson_generation import SYSTEM_PROMPT, build_generation_prompt, build_regeneration_prompt, build_resource_excerpts
 from app.planning.safeguarding import scan_for_safeguarding_concerns
 from app.planning.timeline import normalize_timeline
 from app.schemas.lesson_plan import GenerateLessonPlanRequest
 from app.schemas.lesson_plan_content import REGENERATABLE_SECTIONS, LessonPlanContent
+from app.services import school_service
 
 
 def _get_subject(db: Session, subject_id: uuid.UUID) -> Subject:
@@ -91,8 +95,11 @@ def generate_lesson_plan(
     result = ai_provider.generate_structured(system=SYSTEM_PROMPT, prompt=prompt, schema=LessonPlanContent)
     content, flagged, notes = _finalize_content(result.parsed, payload.duration_minutes)
 
+    membership = school_service.get_membership_for_user(db, user)
+
     plan = LessonPlan(
         owner_user_id=user.id,
+        school_id=membership.school_id if membership else None,
         subject_id=subject.id,
         year_group_id=year_group.id,
         curriculum_topic_id=payload.curriculum_topic_id,
@@ -128,8 +135,90 @@ def get_owned_plan(db: Session, user: User, plan_id: uuid.UUID) -> LessonPlan:
     return plan
 
 
-def list_plans(db: Session, user: User) -> list[LessonPlan]:
-    return db.query(LessonPlan).filter_by(owner_user_id=user.id).order_by(LessonPlan.updated_at.desc()).all()
+def _apply_filters(
+    query: Query,
+    *,
+    subject_id: uuid.UUID | None,
+    year_group_id: uuid.UUID | None,
+    topic: str | None,
+    date_from: date | None,
+    date_to: date | None,
+    class_id: uuid.UUID | None,
+) -> Query:
+    if subject_id:
+        query = query.filter(LessonPlan.subject_id == subject_id)
+    if year_group_id:
+        query = query.filter(LessonPlan.year_group_id == year_group_id)
+    if topic:
+        query = query.filter(LessonPlan.topic_title.ilike(f"%{topic}%"))
+    if date_from:
+        query = query.filter(LessonPlan.updated_at >= date_from)
+    if date_to:
+        query = query.filter(LessonPlan.updated_at <= date_to)
+    if class_id:
+        query = query.filter(LessonPlan.class_id == class_id)
+    return query
+
+
+def list_plans(
+    db: Session,
+    user: User,
+    *,
+    subject_id: uuid.UUID | None = None,
+    year_group_id: uuid.UUID | None = None,
+    topic: str | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    class_id: uuid.UUID | None = None,
+) -> list[LessonPlan]:
+    query = db.query(LessonPlan).filter_by(owner_user_id=user.id)
+    query = _apply_filters(
+        query, subject_id=subject_id, year_group_id=year_group_id, topic=topic, date_from=date_from, date_to=date_to, class_id=class_id
+    )
+    return query.order_by(LessonPlan.updated_at.desc()).all()
+
+
+def list_school_plans(
+    db: Session,
+    actor: User,
+    school_id: uuid.UUID,
+    *,
+    subject_id: uuid.UUID | None = None,
+    year_group_id: uuid.UUID | None = None,
+    topic: str | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    class_id: uuid.UUID | None = None,
+) -> list[LessonPlan]:
+    """Read-only oversight for a school admin -- every lesson plan created
+    by a teacher who was a member of this school at generation time, never
+    plans from any other school.
+    """
+    school_service.assert_school_member(db, actor, school_id, min_role=SchoolMembershipRole.ADMIN)
+    query = db.query(LessonPlan).filter_by(school_id=school_id)
+    query = _apply_filters(
+        query, subject_id=subject_id, year_group_id=year_group_id, topic=topic, date_from=date_from, date_to=date_to, class_id=class_id
+    )
+    return query.order_by(LessonPlan.updated_at.desc()).all()
+
+
+def get_school_plan(db: Session, actor: User, school_id: uuid.UUID, plan_id: uuid.UUID) -> LessonPlan:
+    school_service.assert_school_member(db, actor, school_id, min_role=SchoolMembershipRole.ADMIN)
+    plan = db.query(LessonPlan).filter_by(id=plan_id, school_id=school_id).first()
+    if not plan:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Lesson plan not found.")
+    return plan
+
+
+def assign_class(db: Session, user: User, plan: LessonPlan, class_id: uuid.UUID | None) -> LessonPlan:
+    if class_id is not None:
+        class_ = db.query(Class).filter_by(id=class_id, owner_user_id=user.id).first()
+        if not class_:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Class not found.")
+    plan.class_id = class_id
+    db.commit()
+    db.refresh(plan)
+    return plan
 
 
 def list_versions(db: Session, plan: LessonPlan) -> list[LessonPlanVersion]:
