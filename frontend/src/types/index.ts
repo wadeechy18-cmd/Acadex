@@ -244,3 +244,26 @@ export interface Qualification {
   subject_id: string;
   subject_name: string;
 }
+
+export interface AffectedLesson {
+  id: string;
+  timetable_entry_id: string;
+  time_slot_label: string;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  subject_name: string;
+  class_name: string | null;
+  room_name: string | null;
+}
+
+export interface TeacherAbsence {
+  id: string;
+  teacher_user_id: string;
+  teacher_name: string;
+  date: string;
+  reason: string | null;
+  reported_by_name: string;
+  affected_lessons: AffectedLesson[];
+  created_at: string;
+}

@@ -23,6 +23,7 @@ from app.models.timetable import (
     Timetable,
     TimetableEntry,
 )
+from app.models.absence import AffectedLesson, TeacherAbsence
 
 __all__ = [
     "User",
@@ -59,4 +60,6 @@ __all__ = [
     "TeacherSubjectQualification",
     "TeacherAvailability",
     "AvailabilityStatus",
+    "TeacherAbsence",
+    "AffectedLesson",
 ]
