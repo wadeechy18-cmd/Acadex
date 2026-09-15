@@ -85,6 +85,97 @@ def build_regeneration_prompt(
     return "\n".join(lines)
 
 
+INTENT_SYSTEM_PROMPT = """You are Acadex's request interpreter. A primary school teacher in England has \
+typed a short, casual request for a lesson. Extract structured fields from it as JSON matching the \
+required schema exactly. Do not generate any lesson content here -- only extract what the teacher said.
+
+Rules:
+- Never invent a value for a field the teacher did not mention -- leave it null.
+- "subject_name" and "year_group_or_key_stage" should be the teacher's own wording (e.g. "science", \
+"early years", "Year 2"), not a curriculum code.
+- "relative_date_phrase" is the teacher's own date wording verbatim (e.g. "tomorrow", "next Monday", \
+"15 September"), or null if no date was mentioned.
+- "topic" is required. If the teacher didn't name a specific curriculum topic, use their general \
+description of what they want to teach as the topic.
+- "ability_level" must be one of "support", "core", "greater_depth", "mixed" if and only if the teacher's \
+wording clearly implies one of those; otherwise null.
+"""
+
+WORKSHEET_SYSTEM_PROMPT = """You are Acadex, generating a pupil worksheet to accompany a lesson plan you \
+have already produced for a primary school teacher in England. Produce a worksheet as JSON matching the \
+required schema exactly.
+
+Rules:
+- Every question must be based on the lesson's topic, objectives and (if given) the resource excerpts -- \
+never introduce unrelated material just to fill a section.
+- "recall_questions" test remembering facts/vocabulary just taught. "understanding_questions" test \
+explaining ideas in the pupil's own words. "application_questions" ask pupils to use the idea in a new \
+situation. "challenge_questions" go beyond the core lesson for pupils who finish early -- it is fine for \
+this list to be shorter than the others, or empty if genuinely nothing suitable applies.
+- Write for the stated year group's reading age.
+"""
+
+HOMEWORK_SYSTEM_PROMPT = """You are Acadex, generating homework to accompany a lesson plan you have \
+already produced for a primary school teacher in England. Produce homework as JSON matching the required \
+schema exactly.
+
+Rules:
+- Homework must reinforce what was taught in this specific lesson -- never introduce a new topic.
+- Tasks must be appropriate for independent work at home without a teacher present.
+- estimated_minutes must be a realistic, honest estimate for the stated year group, not a round default.
+"""
+
+
+def build_worksheet_prompt(
+    *,
+    subject_name: str,
+    year_group_name: str,
+    topic_title: str,
+    lesson_overview: str,
+    learning_objectives: list[str],
+    resource_excerpts: list[tuple[str, str]],
+) -> str:
+    lines = [
+        f"Subject: {subject_name}",
+        f"Year group: {year_group_name}",
+        f"Topic: {topic_title}",
+        f"Lesson overview: {lesson_overview}",
+        "Learning objectives:",
+        *[f"- {obj}" for obj in learning_objectives],
+    ]
+    if resource_excerpts:
+        lines.append("The teacher's own resources for this lesson -- draw questions from their content where relevant:")
+        for name, excerpt in resource_excerpts:
+            lines.append(f"--- Resource: {name} ---\n{excerpt}")
+    lines.append("Produce the worksheet now, matching the required JSON schema exactly.")
+    return "\n".join(lines)
+
+
+def build_homework_prompt(
+    *,
+    subject_name: str,
+    year_group_name: str,
+    topic_title: str,
+    lesson_overview: str,
+    learning_objectives: list[str],
+    resource_excerpts: list[tuple[str, str]],
+) -> str:
+    lines = [
+        f"Subject: {subject_name}",
+        f"Year group: {year_group_name}",
+        f"Topic: {topic_title}",
+        f"Lesson overview: {lesson_overview}",
+        "Learning objectives covered in the lesson:",
+        *[f"- {obj}" for obj in learning_objectives],
+    ]
+    if resource_excerpts:
+        lines.append("The teacher's own resources for this lesson -- draw tasks from their content where relevant:")
+        for name, excerpt in resource_excerpts:
+            lines.append(f"--- Resource: {name} ---\n{excerpt}")
+    lines.append("Produce the homework now, matching the required JSON schema exactly.")
+    return "\n".join(lines)
+
+
 MAX_RESOURCE_EXCERPT_CHARS = 2000
 MAX_TOTAL_RESOURCE_CHARS = 6000
 

@@ -8,7 +8,7 @@ from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.resource import ResourceKind
 from app.models.user import User
-from app.schemas.resource import ResourceRenameRequest, ResourceResponse
+from app.schemas.resource import ResourceRenameRequest, ResourceResponse, ResourceTagRequest
 from app.services import resource_service
 from app.storage.base import StorageBackend, get_storage_backend
 
@@ -19,13 +19,23 @@ router = APIRouter(prefix="/resources", tags=["resources"])
 async def upload_resource(
     file: UploadFile = File(...),
     display_name: str | None = Form(None),
+    subject_id: uuid.UUID | None = Form(None),
+    year_group_id: uuid.UUID | None = Form(None),
     db: Session = Depends(get_db),
     storage: StorageBackend = Depends(get_storage_backend),
     user: User = Depends(get_current_user),
 ) -> ResourceResponse:
     file_bytes = await file.read()
     return resource_service.upload_resource(
-        db, storage, user, file_bytes, file.filename or "upload", file.content_type or "application/octet-stream", display_name
+        db,
+        storage,
+        user,
+        file_bytes,
+        file.filename or "upload",
+        file.content_type or "application/octet-stream",
+        display_name,
+        subject_id,
+        year_group_id,
     )
 
 
@@ -41,6 +51,13 @@ def rename_resource(
     resource_id: uuid.UUID, payload: ResourceRenameRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)
 ) -> ResourceResponse:
     return resource_service.rename_resource(db, user, resource_id, payload.display_name)
+
+
+@router.patch("/{resource_id}/tags", response_model=ResourceResponse)
+def tag_resource(
+    resource_id: uuid.UUID, payload: ResourceTagRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+) -> ResourceResponse:
+    return resource_service.tag_resource(db, user, resource_id, payload)
 
 
 @router.delete("/{resource_id}", status_code=status.HTTP_204_NO_CONTENT)

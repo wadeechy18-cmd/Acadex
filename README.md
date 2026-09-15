@@ -74,10 +74,15 @@ timetable/absence/cover-substitution workflow.
 ## Status
 
 The core rebuild is complete: identity & multi-tenancy, the England/English
-National Curriculum hierarchy, teacher resources, the AI Lesson Plan Builder
-(generation, versioning, section regeneration, export), classes/tasks/lesson
-plan library search, the timetable grid with qualifications and
-availability, absence detection, and the OR-Tools substitution optimizer
-with admin approval. A handful of sidebar links remain unbuilt placeholders
-(`/teacher/calendar`, `/teacher/settings`, `/school/subjects`) — see
-`docs/ARCHITECTURE.md`'s "Known simplifications" section.
+National Curriculum hierarchy, teacher resources (with subject/year-group
+tagging for retrieval), the AI Lesson Plan Builder (a one-sentence
+quick-generate flow that resource-matches, date-resolves, and curriculum-
+matches before ever calling AI, plus the detailed form; generation now
+includes a worksheet and homework alongside the lesson; versioning, section/
+worksheet/homework regeneration, PDF/DOCX export, and a cached Bangla
+translation), classes/tasks/lesson plan library search, the timetable grid
+with qualifications and availability, absence detection, and the OR-Tools
+substitution optimizer with admin approval. A handful of sidebar links
+remain unbuilt placeholders (`/teacher/calendar`, `/teacher/settings`,
+`/school/subjects`) — see `docs/ARCHITECTURE.md`'s "Known simplifications"
+section.

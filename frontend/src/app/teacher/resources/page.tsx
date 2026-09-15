@@ -4,9 +4,12 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { apiFetch, ApiError, downloadFile, getAccessToken } from "@/lib/api-client";
-import type { Resource } from "@/types";
+import type { CurriculumSummary, KeyStageSummary, Resource, SubjectSummary, YearGroupSummary } from "@/types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+
+const selectClass =
+  "flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
 const KIND_LABELS: Record<Resource["kind"], string> = {
   pdf: "PDF",
@@ -24,6 +27,10 @@ export default function TeacherResourcesPage() {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadSubjectId, setUploadSubjectId] = useState("");
+  const [uploadYearGroupId, setUploadYearGroupId] = useState("");
+  const [subjects, setSubjects] = useState<SubjectSummary[]>([]);
+  const [yearGroups, setYearGroups] = useState<YearGroupSummary[]>([]);
 
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
@@ -38,6 +45,22 @@ export default function TeacherResourcesPage() {
 
   useEffect(loadResources, []);
 
+  useEffect(() => {
+    apiFetch<CurriculumSummary[]>("/curriculum/curricula", undefined, true).then(async (curricula) => {
+      const curriculum = curricula[0];
+      if (!curriculum) return;
+      const [subjectList, keyStages] = await Promise.all([
+        apiFetch<SubjectSummary[]>(`/curriculum/curricula/${curriculum.id}/subjects`, undefined, true),
+        apiFetch<KeyStageSummary[]>(`/curriculum/curricula/${curriculum.id}/key-stages`, undefined, true),
+      ]);
+      setSubjects(subjectList);
+      const yearGroupLists = await Promise.all(
+        keyStages.map((ks) => apiFetch<YearGroupSummary[]>(`/curriculum/key-stages/${ks.id}/year-groups`, undefined, true))
+      );
+      setYearGroups(yearGroupLists.flat());
+    });
+  }, []);
+
   async function handleUpload(e: FormEvent) {
     e.preventDefault();
     const file = fileInputRef.current?.files?.[0];
@@ -48,6 +71,8 @@ export default function TeacherResourcesPage() {
     try {
       const formData = new FormData();
       formData.append("file", file);
+      if (uploadSubjectId) formData.append("subject_id", uploadSubjectId);
+      if (uploadYearGroupId) formData.append("year_group_id", uploadYearGroupId);
       const token = getAccessToken();
       const res = await fetch(`${API_URL}/resources`, {
         method: "POST",
@@ -91,13 +116,39 @@ export default function TeacherResourcesPage() {
         Upload documents, slides, and images to reuse when Acadex builds your lesson plans.
       </p>
 
-      <form onSubmit={handleUpload} className="mt-6 flex max-w-md items-end gap-3">
-        <div className="flex-1">
-          <Input ref={fileInputRef} type="file" accept=".pdf,.docx,.pptx,.txt,image/jpeg,image/png,image/webp,image/gif" />
+      <form onSubmit={handleUpload} className="mt-6 flex max-w-2xl flex-col gap-3">
+        <div className="flex items-end gap-3">
+          <div className="flex-1">
+            <Input ref={fileInputRef} type="file" accept=".pdf,.docx,.pptx,.txt,image/jpeg,image/png,image/webp,image/gif" />
+          </div>
+          <Button type="submit" disabled={uploading}>
+            {uploading ? "Uploading…" : "Upload"}
+          </Button>
         </div>
-        <Button type="submit" disabled={uploading}>
-          {uploading ? "Uploading…" : "Upload"}
-        </Button>
+        <div className="flex gap-3">
+          <div className="flex-1">
+            <label className="text-xs text-muted-foreground">Subject (optional -- helps Acadex find this later)</label>
+            <select className={selectClass} value={uploadSubjectId} onChange={(e) => setUploadSubjectId(e.target.value)}>
+              <option value="">Not tagged</option>
+              {subjects.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex-1">
+            <label className="text-xs text-muted-foreground">Year group (optional)</label>
+            <select className={selectClass} value={uploadYearGroupId} onChange={(e) => setUploadYearGroupId(e.target.value)}>
+              <option value="">Not tagged</option>
+              {yearGroups.map((y) => (
+                <option key={y.id} value={y.id}>
+                  {y.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
       </form>
       {uploadError && <p className="mt-2 text-sm text-destructive">{uploadError}</p>}
 

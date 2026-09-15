@@ -2,7 +2,7 @@ import io
 
 import docx
 
-from app.schemas.lesson_plan_content import LessonPlanContent
+from app.schemas.lesson_plan_content import HomeworkContent, LessonPlanContent, WorksheetContent
 
 
 def render_lesson_plan_docx(content: LessonPlanContent, subject_name: str, year_group_name: str) -> bytes:
@@ -51,6 +51,47 @@ def render_lesson_plan_docx(content: LessonPlanContent, subject_name: str, year_
         row[0].text = f"{entry.start_minute:02d}-{entry.end_minute:02d}"
         row[1].text = entry.activity
         row[2].text = entry.description
+
+    buffer = io.BytesIO()
+    document.save(buffer)
+    return buffer.getvalue()
+
+
+def render_worksheet_docx(worksheet: WorksheetContent, subject_name: str, year_group_name: str) -> bytes:
+    document = docx.Document()
+    document.add_heading(worksheet.title, level=0)
+    document.add_paragraph(f"{subject_name} · {year_group_name}")
+    document.add_paragraph(worksheet.instructions)
+
+    def section(heading: str, questions: list[str]):
+        document.add_heading(heading, level=2)
+        if questions:
+            for q in questions:
+                document.add_paragraph(q, style="List Number")
+        else:
+            document.add_paragraph("-")
+
+    section("Recall questions", worksheet.recall_questions)
+    section("Understanding questions", worksheet.understanding_questions)
+    section("Application questions", worksheet.application_questions)
+    section("Challenge questions", worksheet.challenge_questions)
+
+    buffer = io.BytesIO()
+    document.save(buffer)
+    return buffer.getvalue()
+
+
+def render_homework_docx(homework: HomeworkContent, subject_name: str, year_group_name: str) -> bytes:
+    document = docx.Document()
+    document.add_heading(homework.title, level=0)
+    document.add_paragraph(f"{subject_name} · {year_group_name} · estimated {homework.estimated_minutes} minutes")
+    document.add_paragraph(homework.instructions)
+    document.add_heading("Tasks", level=2)
+    if homework.tasks:
+        for task in homework.tasks:
+            document.add_paragraph(task, style="List Number")
+    else:
+        document.add_paragraph("-")
 
     buffer = io.BytesIO()
     document.save(buffer)

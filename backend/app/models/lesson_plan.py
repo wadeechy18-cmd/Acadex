@@ -1,7 +1,8 @@
 import uuid
+from datetime import date
 from enum import Enum as PyEnum
 
-from sqlalchemy import Boolean, Enum, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, Date, Enum, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -47,6 +48,11 @@ class LessonPlan(UUIDPKMixin, TimestampMixin, Base):
     topic_title: Mapped[str] = mapped_column(String(300), nullable=False)
     duration_minutes: Mapped[int] = mapped_column(Integer, nullable=False)
     ability_level: Mapped[AbilityLevel] = mapped_column(Enum(AbilityLevel, name="ability_level"), nullable=False)
+    # Set when a teacher asks for a lesson "for tomorrow" / a named date via
+    # the quick-generate flow (app/planning/date_resolution.py resolves the
+    # phrase deterministically); null for plans built through the detailed
+    # form, which never asks for a date.
+    scheduled_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
 
 class LessonPlanVersion(UUIDPKMixin, TimestampMixin, Base):
@@ -64,6 +70,16 @@ class LessonPlanVersion(UUIDPKMixin, TimestampMixin, Base):
     )
     version_number: Mapped[int] = mapped_column(Integer, nullable=False)
     content: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    # Worksheet/homework are generated alongside the lesson and versioned
+    # with it, but stored in their own columns (rather than folded into
+    # `content`) since they're independently regeneratable and translatable.
+    # Null only for versions created before this feature existed.
+    worksheet_content: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    homework_content: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    # Cached Bangla translation of (content, worksheet_content,
+    # homework_content) -- see app/planning/translation.py. Never generated
+    # eagerly; populated on first request for this version, then reused.
+    translation_bn: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     created_by_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     generation_kind: Mapped[GenerationKind] = mapped_column(Enum(GenerationKind, name="lesson_plan_generation_kind"), nullable=False)
     generation_notes: Mapped[str | None] = mapped_column(Text, nullable=True)

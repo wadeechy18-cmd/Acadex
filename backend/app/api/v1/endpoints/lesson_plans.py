@@ -8,8 +8,8 @@ from sqlalchemy.orm import Session
 from app.ai.provider import AIProvider, get_ai_provider
 from app.api.deps import get_current_user
 from app.db.session import get_db
-from app.export.docx import render_lesson_plan_docx
-from app.export.pdf import render_lesson_plan_pdf
+from app.export.docx import render_homework_docx, render_lesson_plan_docx, render_worksheet_docx
+from app.export.pdf import render_homework_pdf, render_lesson_plan_pdf, render_worksheet_pdf
 from app.models.class_ import Class
 from app.models.curriculum import Subject, YearGroup
 from app.models.lesson_plan import LessonPlan, LessonPlanVersion
@@ -23,7 +23,8 @@ from app.schemas.lesson_plan import (
     RegenerateSectionRequest,
     SaveVersionRequest,
 )
-from app.schemas.lesson_plan_content import REGENERATABLE_SECTIONS, LessonPlanContent
+from app.schemas.lesson_plan_content import REGENERATABLE_SECTIONS, HomeworkContent, LessonPlanContent, TranslatedContent, WorksheetContent
+from app.schemas.quick_lesson import QuickGenerateRequest
 from app.services import auth_service, lesson_plan_service
 
 router = APIRouter(prefix="/lesson-plans", tags=["lesson-plans"])
@@ -45,6 +46,9 @@ def _version_response(db: Session, version: LessonPlanVersion) -> LessonPlanVers
         id=version.id,
         version_number=version.version_number,
         content=LessonPlanContent.model_validate(version.content),
+        worksheet=WorksheetContent.model_validate(version.worksheet_content) if version.worksheet_content else None,
+        homework_task=HomeworkContent.model_validate(version.homework_content) if version.homework_content else None,
+        translation_bn=TranslatedContent.model_validate(version.translation_bn) if version.translation_bn else None,
         generation_kind=version.generation_kind,
         generation_notes=version.generation_notes,
         safeguarding_flagged=version.safeguarding_flagged,
@@ -68,6 +72,7 @@ def _plan_response(db: Session, plan: LessonPlan) -> LessonPlanResponse:
         topic_title=plan.topic_title,
         duration_minutes=plan.duration_minutes,
         ability_level=plan.ability_level,
+        scheduled_date=plan.scheduled_date,
         class_id=plan.class_id,
         class_name=class_.name if class_ else None,
         created_at=plan.created_at,
@@ -90,6 +95,7 @@ def _summary_response(db: Session, plan: LessonPlan) -> LessonPlanSummaryRespons
         topic_title=plan.topic_title,
         duration_minutes=plan.duration_minutes,
         ability_level=plan.ability_level,
+        scheduled_date=plan.scheduled_date,
         class_id=plan.class_id,
         class_name=class_.name if class_ else None,
         owner_display_name=auth_service.get_display_name(db, owner),
@@ -106,6 +112,21 @@ def generate(
     user: User = Depends(get_current_user),
 ) -> LessonPlanResponse:
     plan = lesson_plan_service.generate_lesson_plan(db, ai_provider, user, payload)
+    return _plan_response(db, plan)
+
+
+@router.post("/quick-generate", response_model=LessonPlanResponse, status_code=status.HTTP_201_CREATED)
+def quick_generate(
+    payload: QuickGenerateRequest,
+    db: Session = Depends(get_db),
+    ai_provider: AIProvider = Depends(_require_ai_provider),
+    user: User = Depends(get_current_user),
+) -> LessonPlanResponse:
+    """The "what do you want to teach?" entry point -- one sentence in, a
+    complete lesson (plus worksheet and homework, drawn from the teacher's
+    own resource library) out. See lesson_plan_service.quick_generate_from_text.
+    """
+    plan = lesson_plan_service.quick_generate_from_text(db, ai_provider, user, payload.text)
     return _plan_response(db, plan)
 
 
@@ -165,7 +186,7 @@ def save_as_new_version(
     plan_id: uuid.UUID, payload: SaveVersionRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)
 ) -> LessonPlanVersionResponse:
     plan = lesson_plan_service.get_owned_plan(db, user, plan_id)
-    version = lesson_plan_service.save_as_new_version(db, user, plan, payload.content)
+    version = lesson_plan_service.save_as_new_version(db, user, plan, payload.content, payload.worksheet, payload.homework_task)
     return _version_response(db, version)
 
 
@@ -178,7 +199,7 @@ def save_edit(
     user: User = Depends(get_current_user),
 ) -> LessonPlanVersionResponse:
     plan = lesson_plan_service.get_owned_plan(db, user, plan_id)
-    version = lesson_plan_service.save_edit(db, user, plan, version_id, payload.content)
+    version = lesson_plan_service.save_edit(db, user, plan, version_id, payload.content, payload.worksheet, payload.homework_task)
     return _version_response(db, version)
 
 
@@ -210,6 +231,48 @@ def regenerate_section(
     return _version_response(db, version)
 
 
+@router.post("/{plan_id}/worksheet/regenerate", response_model=LessonPlanVersionResponse, status_code=status.HTTP_201_CREATED)
+def regenerate_worksheet(
+    plan_id: uuid.UUID,
+    payload: RegenerateSectionRequest,
+    db: Session = Depends(get_db),
+    ai_provider: AIProvider = Depends(_require_ai_provider),
+    user: User = Depends(get_current_user),
+) -> LessonPlanVersionResponse:
+    plan = lesson_plan_service.get_owned_plan(db, user, plan_id)
+    version = lesson_plan_service.regenerate_worksheet(db, ai_provider, user, plan, payload.instructions)
+    return _version_response(db, version)
+
+
+@router.post("/{plan_id}/homework/regenerate", response_model=LessonPlanVersionResponse, status_code=status.HTTP_201_CREATED)
+def regenerate_homework(
+    plan_id: uuid.UUID,
+    payload: RegenerateSectionRequest,
+    db: Session = Depends(get_db),
+    ai_provider: AIProvider = Depends(_require_ai_provider),
+    user: User = Depends(get_current_user),
+) -> LessonPlanVersionResponse:
+    plan = lesson_plan_service.get_owned_plan(db, user, plan_id)
+    version = lesson_plan_service.regenerate_homework(db, ai_provider, user, plan, payload.instructions)
+    return _version_response(db, version)
+
+
+@router.post("/{plan_id}/versions/{version_id}/translate", response_model=LessonPlanVersionResponse)
+def translate_version(
+    plan_id: uuid.UUID,
+    version_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    ai_provider: AIProvider = Depends(_require_ai_provider),
+    user: User = Depends(get_current_user),
+) -> LessonPlanVersionResponse:
+    """Cached (see lesson_plan_service.translate_version) -- calling this
+    again for a version that already has a translation just returns it.
+    """
+    plan = lesson_plan_service.get_owned_plan(db, user, plan_id)
+    version = lesson_plan_service.translate_version(db, ai_provider, user, plan, version_id)
+    return _version_response(db, version)
+
+
 @router.get("/{plan_id}/versions/{version_id}/export.pdf")
 def export_pdf(plan_id: uuid.UUID, version_id: uuid.UUID, db: Session = Depends(get_db), user: User = Depends(get_current_user)) -> Response:
     plan = lesson_plan_service.get_owned_plan(db, user, plan_id)
@@ -237,6 +300,86 @@ def export_docx(plan_id: uuid.UUID, version_id: uuid.UUID, db: Session = Depends
         content=docx_bytes,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         headers={"Content-Disposition": f'attachment; filename="{_safe_header_filename(content.title)}.docx"'},
+    )
+
+
+def _get_worksheet_or_404(version: LessonPlanVersion) -> WorksheetContent:
+    if not version.worksheet_content:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "This version has no worksheet.")
+    return WorksheetContent.model_validate(version.worksheet_content)
+
+
+def _get_homework_or_404(version: LessonPlanVersion) -> HomeworkContent:
+    if not version.homework_content:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "This version has no homework.")
+    return HomeworkContent.model_validate(version.homework_content)
+
+
+@router.get("/{plan_id}/versions/{version_id}/worksheet/export.pdf")
+def export_worksheet_pdf(
+    plan_id: uuid.UUID, version_id: uuid.UUID, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+) -> Response:
+    plan = lesson_plan_service.get_owned_plan(db, user, plan_id)
+    version = lesson_plan_service.get_version(db, plan, version_id)
+    worksheet = _get_worksheet_or_404(version)
+    subject = db.get(Subject, plan.subject_id)
+    year_group = db.get(YearGroup, plan.year_group_id)
+    pdf_bytes = render_worksheet_pdf(worksheet, subject.name, year_group.name)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{_safe_header_filename(worksheet.title)}.pdf"'},
+    )
+
+
+@router.get("/{plan_id}/versions/{version_id}/worksheet/export.docx")
+def export_worksheet_docx(
+    plan_id: uuid.UUID, version_id: uuid.UUID, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+) -> Response:
+    plan = lesson_plan_service.get_owned_plan(db, user, plan_id)
+    version = lesson_plan_service.get_version(db, plan, version_id)
+    worksheet = _get_worksheet_or_404(version)
+    subject = db.get(Subject, plan.subject_id)
+    year_group = db.get(YearGroup, plan.year_group_id)
+    docx_bytes = render_worksheet_docx(worksheet, subject.name, year_group.name)
+    return Response(
+        content=docx_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="{_safe_header_filename(worksheet.title)}.docx"'},
+    )
+
+
+@router.get("/{plan_id}/versions/{version_id}/homework/export.pdf")
+def export_homework_pdf(
+    plan_id: uuid.UUID, version_id: uuid.UUID, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+) -> Response:
+    plan = lesson_plan_service.get_owned_plan(db, user, plan_id)
+    version = lesson_plan_service.get_version(db, plan, version_id)
+    homework_task = _get_homework_or_404(version)
+    subject = db.get(Subject, plan.subject_id)
+    year_group = db.get(YearGroup, plan.year_group_id)
+    pdf_bytes = render_homework_pdf(homework_task, subject.name, year_group.name)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{_safe_header_filename(homework_task.title)}.pdf"'},
+    )
+
+
+@router.get("/{plan_id}/versions/{version_id}/homework/export.docx")
+def export_homework_docx(
+    plan_id: uuid.UUID, version_id: uuid.UUID, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+) -> Response:
+    plan = lesson_plan_service.get_owned_plan(db, user, plan_id)
+    version = lesson_plan_service.get_version(db, plan, version_id)
+    homework_task = _get_homework_or_404(version)
+    subject = db.get(Subject, plan.subject_id)
+    year_group = db.get(YearGroup, plan.year_group_id)
+    docx_bytes = render_homework_docx(homework_task, subject.name, year_group.name)
+    return Response(
+        content=docx_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="{_safe_header_filename(homework_task.title)}.docx"'},
     )
 
 

@@ -15,9 +15,20 @@ class ResourceResponse(BaseModel):
     file_size_bytes: int
     extraction_status: ExtractionStatus
     extraction_error: str | None
+    subject_id: uuid.UUID | None
+    year_group_id: uuid.UUID | None
     created_at: datetime
     updated_at: datetime
 
 
 class ResourceRenameRequest(BaseModel):
     display_name: str = Field(min_length=1, max_length=255)
+
+
+class ResourceTagRequest(BaseModel):
+    """Both fields are optional and independent -- sending one leaves the
+    other untouched. Pass null explicitly to clear a tag.
+    """
+
+    subject_id: uuid.UUID | None = Field(default=None)
+    year_group_id: uuid.UUID | None = Field(default=None)

@@ -43,6 +43,8 @@ export interface Resource {
   file_size_bytes: number;
   extraction_status: ExtractionStatus;
   extraction_error: string | null;
+  subject_id: string | null;
+  year_group_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -124,10 +126,35 @@ export interface LessonPlanContent {
   timeline: TimelineEntry[];
 }
 
+export interface WorksheetContent {
+  title: string;
+  instructions: string;
+  recall_questions: string[];
+  understanding_questions: string[];
+  application_questions: string[];
+  challenge_questions: string[];
+}
+
+export interface HomeworkContent {
+  title: string;
+  instructions: string;
+  tasks: string[];
+  estimated_minutes: number;
+}
+
+export interface TranslatedContent {
+  lesson: LessonPlanContent;
+  worksheet: WorksheetContent | null;
+  homework: HomeworkContent | null;
+}
+
 export interface LessonPlanVersion {
   id: string;
   version_number: number;
   content: LessonPlanContent;
+  worksheet: WorksheetContent | null;
+  homework_task: HomeworkContent | null;
+  translation_bn: TranslatedContent | null;
   generation_kind: GenerationKind;
   generation_notes: string | null;
   safeguarding_flagged: boolean;
@@ -145,6 +172,7 @@ export interface LessonPlan {
   topic_title: string;
   duration_minutes: number;
   ability_level: AbilityLevel;
+  scheduled_date: string | null;
   class_id: string | null;
   class_name: string | null;
   created_at: string;
@@ -160,6 +188,7 @@ export interface LessonPlanSummary {
   topic_title: string;
   duration_minutes: number;
   ability_level: AbilityLevel;
+  scheduled_date: string | null;
   class_id: string | null;
   class_name: string | null;
   owner_display_name: string;

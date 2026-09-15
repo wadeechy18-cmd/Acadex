@@ -5,7 +5,8 @@ from pydantic import BaseModel
 from app.ai.provider import AIGenerationResult, AIProvider, get_ai_provider
 from app.main import app
 from app.models.curriculum import Curriculum, CurriculumTopic, KeyStage, Objective, ProgrammeOfStudy, Subject, YearGroup
-from app.schemas.lesson_plan_content import Differentiation, LessonPlanContent, TimelineEntry
+from app.schemas.lesson_plan_content import Differentiation, HomeworkContent, LessonPlanContent, TimelineEntry, TranslatedContent, WorksheetContent
+from app.schemas.quick_lesson import QuickLessonIntent
 from tests.conftest import auth_headers, register_school, register_teacher
 
 SAMPLE_CONTENT = LessonPlanContent(
@@ -38,6 +39,27 @@ SAMPLE_CONTENT = LessonPlanContent(
 )
 
 
+SAMPLE_WORKSHEET = WorksheetContent(
+    title="Fractions Worksheet",
+    instructions="Answer all questions in your book.",
+    recall_questions=["What is a half?"],
+    understanding_questions=["Explain what makes two parts equal."],
+    application_questions=["Split 8 sweets into quarters."],
+    challenge_questions=["Compare 1/2 and 3/4."],
+)
+
+SAMPLE_HOMEWORK = HomeworkContent(
+    title="Fractions Homework",
+    instructions="Complete at home with an adult.",
+    tasks=["Find three things at home that can be split into halves."],
+    estimated_minutes=15,
+)
+
+SAMPLE_INTENT = QuickLessonIntent(subject_name="Maths", year_group_or_key_stage="Year 2", topic="Fractions")
+
+SAMPLE_TRANSLATION = TranslatedContent(lesson=SAMPLE_CONTENT, worksheet=SAMPLE_WORKSHEET, homework=SAMPLE_HOMEWORK)
+
+
 class FakeAIProvider(AIProvider):
     def __init__(self, results: list):
         self._results = list(results)
@@ -46,9 +68,18 @@ class FakeAIProvider(AIProvider):
     def generate_structured(self, *, system: str, prompt: str, schema: type[BaseModel]) -> AIGenerationResult:
         self.calls.append((system, prompt, schema))
 
-        if issubclass(schema, LessonPlanContent):
-            raw = self._results.pop(0) if self._results else SAMPLE_CONTENT
-            parsed = raw if isinstance(raw, LessonPlanContent) else schema.model_validate(raw)
+        _DEFAULTS: dict[type, BaseModel] = {
+            LessonPlanContent: SAMPLE_CONTENT,
+            WorksheetContent: SAMPLE_WORKSHEET,
+            HomeworkContent: SAMPLE_HOMEWORK,
+            QuickLessonIntent: SAMPLE_INTENT,
+            TranslatedContent: SAMPLE_TRANSLATION,
+        }
+        matched_default = next((default for schema_type, default in _DEFAULTS.items() if issubclass(schema, schema_type)), None)
+
+        if matched_default is not None:
+            raw = self._results.pop(0) if self._results else matched_default
+            parsed = raw if isinstance(raw, schema) else schema.model_validate(raw)
         else:
             # A section-regeneration schema has exactly one field -- wrap the
             # queued raw value (e.g. a plain string) as that field's value,
@@ -452,3 +483,116 @@ def test_a_lesson_plan_created_by_a_teacher_with_no_school_has_no_school_id(clie
     admin = register_school(client, school_name="Unrelated School")
     res = client.get(f"/api/v1/schools/{admin['school']['id']}/lesson-plans", headers=auth_headers(admin))
     assert res.json() == []
+
+
+def test_generate_produces_a_worksheet_and_homework_alongside_the_lesson(client, db_session):
+    seed = _seed_curriculum(db_session)
+    override_ai_provider(SAMPLE_CONTENT)
+    teacher = register_teacher(client)
+
+    res = client.post("/api/v1/lesson-plans/generate", json=_generate_payload(seed), headers=auth_headers(teacher))
+    clear_ai_override()
+    assert res.status_code == 201, res.text
+    version = res.json()["current_version"]
+    assert version["worksheet"]["title"] == SAMPLE_WORKSHEET.title
+    assert version["homework_task"]["title"] == SAMPLE_HOMEWORK.title
+    assert version["translation_bn"] is None
+
+
+def test_generate_without_manual_resources_auto_retrieves_from_the_library(client, db_session, tmp_path):
+    import io
+
+    from app.storage.base import LocalStorageBackend, get_storage_backend
+
+    backend = LocalStorageBackend(str(tmp_path), "http://localhost:8000")
+    app.dependency_overrides[get_storage_backend] = lambda: backend
+
+    seed = _seed_curriculum(db_session)
+    teacher = register_teacher(client)
+    upload = client.post(
+        "/api/v1/resources",
+        files={"file": ("notes.txt", io.BytesIO(b"Use pizza slices to teach fractions and halves."), "text/plain")},
+        data={"subject_id": str(seed["subject"].id), "year_group_id": str(seed["year_group"].id)},
+        headers=auth_headers(teacher),
+    )
+    assert upload.status_code == 201, upload.text
+
+    fake = override_ai_provider(SAMPLE_CONTENT)
+    res = client.post(
+        "/api/v1/lesson-plans/generate",
+        json=_generate_payload(seed),  # no resource_ids -- must auto-retrieve
+        headers=auth_headers(teacher),
+    )
+    clear_ai_override()
+    app.dependency_overrides.pop(get_storage_backend, None)
+
+    assert res.status_code == 201, res.text
+    assert "pizza slices" in fake.calls[0][1]
+    assert len(res.json()["current_version"]["resource_ids"]) == 1
+
+
+def test_regenerate_worksheet_only_changes_the_worksheet(client, db_session):
+    seed = _seed_curriculum(db_session)
+    teacher = register_teacher(client)
+    plan = _create_plan(client, seed, teacher)
+
+    new_worksheet = SAMPLE_WORKSHEET.model_copy(update={"title": "Brand New Worksheet"})
+    override_ai_provider(new_worksheet)
+    res = client.post(f"/api/v1/lesson-plans/{plan['id']}/worksheet/regenerate", json={}, headers=auth_headers(teacher))
+    clear_ai_override()
+
+    assert res.status_code == 201, res.text
+    body = res.json()
+    assert body["worksheet"]["title"] == "Brand New Worksheet"
+    assert body["homework_task"]["title"] == SAMPLE_HOMEWORK.title
+    assert body["content"]["title"] == SAMPLE_CONTENT.title
+
+
+def test_regenerate_homework_only_changes_the_homework(client, db_session):
+    seed = _seed_curriculum(db_session)
+    teacher = register_teacher(client)
+    plan = _create_plan(client, seed, teacher)
+
+    new_homework = SAMPLE_HOMEWORK.model_copy(update={"title": "Brand New Homework"})
+    override_ai_provider(new_homework)
+    res = client.post(f"/api/v1/lesson-plans/{plan['id']}/homework/regenerate", json={}, headers=auth_headers(teacher))
+    clear_ai_override()
+
+    assert res.status_code == 201, res.text
+    body = res.json()
+    assert body["homework_task"]["title"] == "Brand New Homework"
+    assert body["worksheet"]["title"] == SAMPLE_WORKSHEET.title
+
+
+def test_worksheet_and_homework_export_endpoints(client, db_session):
+    seed = _seed_curriculum(db_session)
+    teacher = register_teacher(client)
+    headers = auth_headers(teacher)
+    plan = _create_plan(client, seed, teacher)
+    version_id = plan["current_version"]["id"]
+
+    pdf = client.get(f"/api/v1/lesson-plans/{plan['id']}/versions/{version_id}/worksheet/export.pdf", headers=headers)
+    assert pdf.status_code == 200
+    assert pdf.headers["content-type"] == "application/pdf"
+
+    docx = client.get(f"/api/v1/lesson-plans/{plan['id']}/versions/{version_id}/homework/export.docx", headers=headers)
+    assert docx.status_code == 200
+
+
+def test_translate_version_is_cached_across_repeat_requests(client, db_session):
+    seed = _seed_curriculum(db_session)
+    teacher = register_teacher(client)
+    headers = auth_headers(teacher)
+    plan = _create_plan(client, seed, teacher)
+    version_id = plan["current_version"]["id"]
+
+    fake = override_ai_provider(SAMPLE_TRANSLATION)
+    first = client.post(f"/api/v1/lesson-plans/{plan['id']}/versions/{version_id}/translate", headers=headers)
+    assert first.status_code == 200, first.text
+    assert first.json()["translation_bn"]["lesson"]["title"] == SAMPLE_CONTENT.title
+    calls_after_first = len(fake.calls)
+
+    second = client.post(f"/api/v1/lesson-plans/{plan['id']}/versions/{version_id}/translate", headers=headers)
+    clear_ai_override()
+    assert second.status_code == 200
+    assert len(fake.calls) == calls_after_first  # cached -- no second AI call

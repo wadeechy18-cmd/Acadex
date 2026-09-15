@@ -43,6 +43,43 @@ class LessonPlanContent(BaseModel):
     timeline: list[TimelineEntry]
 
 
+class WorksheetContent(BaseModel):
+    """A worksheet generated alongside the lesson plan, based on the same
+    topic and retrieved resources -- never a separate ask from the teacher.
+    Questions are grouped by cognitive demand rather than left as one flat
+    list, matching how a teacher actually picks which ones to set.
+    """
+
+    title: str
+    instructions: str
+    recall_questions: list[str]
+    understanding_questions: list[str]
+    application_questions: list[str]
+    challenge_questions: list[str]
+
+
+class HomeworkContent(BaseModel):
+    """Homework generated alongside the lesson plan to reinforce what was
+    taught -- distinct from LessonPlanContent.homework, which stays a short
+    in-plan note; this is the full standalone task sheet.
+    """
+
+    title: str
+    instructions: str
+    tasks: list[str]
+    estimated_minutes: int
+
+
+class TranslatedContent(BaseModel):
+    """A Bangla translation of one version's full content, stored alongside
+    (never over) the English original -- see app/planning/translation.py.
+    """
+
+    lesson: LessonPlanContent
+    worksheet: WorksheetContent | None = None
+    homework: HomeworkContent | None = None
+
+
 # Sections a teacher can ask Acadex to regenerate individually -- title is
 # trivial to hand-edit and is excluded so "regenerate" always means
 # regenerating substantive content, never just the name.

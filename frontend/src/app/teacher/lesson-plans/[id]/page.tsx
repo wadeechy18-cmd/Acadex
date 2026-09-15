@@ -6,7 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiFetch, ApiError, downloadFile } from "@/lib/api-client";
-import type { LessonPlan, LessonPlanContent, LessonPlanVersion, TimelineEntry } from "@/types";
+import type { HomeworkContent, LessonPlan, LessonPlanContent, LessonPlanVersion, Resource, TimelineEntry, WorksheetContent } from "@/types";
+
+const WORKSHEET_QUESTION_SECTIONS: { key: keyof WorksheetContent; label: string }[] = [
+  { key: "recall_questions", label: "Recall questions" },
+  { key: "understanding_questions", label: "Understanding questions" },
+  { key: "application_questions", label: "Application questions" },
+  { key: "challenge_questions", label: "Challenge questions" },
+];
 
 const textAreaClass =
   "flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
@@ -41,23 +48,32 @@ export default function LessonPlanEditorPage() {
   const [versions, setVersions] = useState<LessonPlanVersion[]>([]);
   const [viewingVersionId, setViewingVersionId] = useState<string | null>(null);
   const [content, setContent] = useState<LessonPlanContent | null>(null);
+  const [worksheet, setWorksheet] = useState<WorksheetContent | null>(null);
+  const [homeworkTask, setHomeworkTask] = useState<HomeworkContent | null>(null);
+  const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [regeneratingSection, setRegeneratingSection] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [language, setLanguage] = useState<"en" | "bn">("en");
+  const [translating, setTranslating] = useState(false);
 
   function loadAll() {
     setLoading(true);
     Promise.all([
       apiFetch<LessonPlan>(`/lesson-plans/${planId}`, undefined, true),
       apiFetch<LessonPlanVersion[]>(`/lesson-plans/${planId}/versions`, undefined, true),
+      apiFetch<Resource[]>("/resources", undefined, true).catch(() => []),
     ])
-      .then(([p, v]) => {
+      .then(([p, v, r]) => {
         setPlan(p);
         setVersions(v);
+        setResources(r);
         setViewingVersionId(null);
         setContent(p.current_version.content);
+        setWorksheet(p.current_version.worksheet);
+        setHomeworkTask(p.current_version.homework_task);
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : "Couldn't load this lesson plan."))
       .finally(() => setLoading(false));
@@ -77,6 +93,9 @@ export default function LessonPlanEditorPage() {
     if (!version) return;
     setViewingVersionId(versionId === currentVersion?.id ? null : versionId);
     setContent(version.content);
+    setWorksheet(version.worksheet);
+    setHomeworkTask(version.homework_task);
+    setLanguage("en");
   }
 
   function updateField<K extends keyof LessonPlanContent>(key: K, value: LessonPlanContent[K]) {
@@ -139,12 +158,63 @@ export default function LessonPlanEditorPage() {
     updateField("timeline", timeline);
   }
 
+  function updateWorksheetField<K extends keyof WorksheetContent>(key: K, value: WorksheetContent[K]) {
+    setWorksheet((prev) => (prev ? { ...prev, [key]: value } : prev));
+  }
+
+  function updateWorksheetQuestion(key: keyof WorksheetContent, index: number, value: string) {
+    if (!worksheet) return;
+    const list = [...(worksheet[key] as string[])];
+    list[index] = value;
+    updateWorksheetField(key, list as never);
+  }
+
+  function addWorksheetQuestion(key: keyof WorksheetContent) {
+    if (!worksheet) return;
+    updateWorksheetField(key, [...(worksheet[key] as string[]), ""] as never);
+  }
+
+  function removeWorksheetQuestion(key: keyof WorksheetContent, index: number) {
+    if (!worksheet) return;
+    const list = [...(worksheet[key] as string[])];
+    list.splice(index, 1);
+    updateWorksheetField(key, list as never);
+  }
+
+  function updateHomeworkField<K extends keyof HomeworkContent>(key: K, value: HomeworkContent[K]) {
+    setHomeworkTask((prev) => (prev ? { ...prev, [key]: value } : prev));
+  }
+
+  function updateHomeworkTaskItem(index: number, value: string) {
+    if (!homeworkTask) return;
+    const tasks = [...homeworkTask.tasks];
+    tasks[index] = value;
+    updateHomeworkField("tasks", tasks);
+  }
+
+  function addHomeworkTask() {
+    if (!homeworkTask) return;
+    updateHomeworkField("tasks", [...homeworkTask.tasks, ""]);
+  }
+
+  function removeHomeworkTask(index: number) {
+    if (!homeworkTask) return;
+    updateHomeworkField(
+      "tasks",
+      homeworkTask.tasks.filter((_, i) => i !== index)
+    );
+  }
+
   async function handleSave() {
     if (!content || !currentVersion || !plan) return;
     setSaving(true);
     setMessage(null);
     try {
-      await apiFetch(`/lesson-plans/${planId}/versions/${currentVersion.id}`, { method: "PATCH", body: JSON.stringify({ content }) }, true);
+      await apiFetch(
+        `/lesson-plans/${planId}/versions/${currentVersion.id}`,
+        { method: "PATCH", body: JSON.stringify({ content, worksheet, homework_task: homeworkTask }) },
+        true
+      );
       setMessage("Saved.");
       loadAll();
     } catch (err) {
@@ -159,13 +229,65 @@ export default function LessonPlanEditorPage() {
     setSaving(true);
     setMessage(null);
     try {
-      await apiFetch(`/lesson-plans/${planId}/versions`, { method: "POST", body: JSON.stringify({ content }) }, true);
+      await apiFetch(
+        `/lesson-plans/${planId}/versions`,
+        { method: "POST", body: JSON.stringify({ content, worksheet, homework_task: homeworkTask }) },
+        true
+      );
       setMessage("Saved as a new version.");
       loadAll();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Couldn't save a new version.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleRegenerateWorksheet() {
+    setRegeneratingSection("worksheet");
+    setError(null);
+    try {
+      const version = await apiFetch<LessonPlanVersion>(`/lesson-plans/${planId}/worksheet/regenerate`, { method: "POST", body: JSON.stringify({}) }, true);
+      setWorksheet(version.worksheet);
+      loadAll();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Couldn't regenerate the worksheet.");
+    } finally {
+      setRegeneratingSection(null);
+    }
+  }
+
+  async function handleRegenerateHomework() {
+    setRegeneratingSection("homework");
+    setError(null);
+    try {
+      const version = await apiFetch<LessonPlanVersion>(`/lesson-plans/${planId}/homework/regenerate`, { method: "POST", body: JSON.stringify({}) }, true);
+      setHomeworkTask(version.homework_task);
+      loadAll();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Couldn't regenerate the homework.");
+    } finally {
+      setRegeneratingSection(null);
+    }
+  }
+
+  async function handleToggleLanguage(target: "en" | "bn") {
+    if (target === "en" || !displayedVersion) {
+      setLanguage(target);
+      return;
+    }
+    setLanguage("bn");
+    if (displayedVersion.translation_bn) return;
+    setTranslating(true);
+    setError(null);
+    try {
+      await apiFetch<LessonPlanVersion>(`/lesson-plans/${planId}/versions/${displayedVersion.id}/translate`, { method: "POST" }, true);
+      loadAll();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Couldn't translate this lesson.");
+      setLanguage("en");
+    } finally {
+      setTranslating(false);
     }
   }
 
@@ -215,7 +337,17 @@ export default function LessonPlanEditorPage() {
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
           {plan.subject_name} · {plan.year_group_name} · {plan.duration_minutes} min · {plan.ability_level}
+          {plan.scheduled_date && ` · ${new Date(plan.scheduled_date).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}`}
         </p>
+
+        <div className="mt-3 flex gap-2 print:hidden">
+          <Button size="sm" variant={language === "en" ? "default" : "outline"} onClick={() => handleToggleLanguage("en")}>
+            English
+          </Button>
+          <Button size="sm" variant={language === "bn" ? "default" : "outline"} disabled={translating} onClick={() => handleToggleLanguage("bn")}>
+            {translating ? "Translating…" : "Translate to বাংলা"}
+          </Button>
+        </div>
 
         {displayedVersion?.safeguarding_flagged && (
           <div className="mt-4 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
@@ -410,6 +542,178 @@ export default function LessonPlanEditorPage() {
               )}
             </div>
           </section>
+
+          {worksheet && (
+            <section className="rounded-lg border p-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold">Worksheet</h2>
+                <div className="flex gap-2 print:hidden">
+                  <Button variant="outline" size="sm" disabled={readOnly || regeneratingSection === "worksheet"} onClick={handleRegenerateWorksheet}>
+                    {regeneratingSection === "worksheet" ? "Regenerating…" : "Regenerate"}
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => downloadFile(`/lesson-plans/${planId}/versions/${displayedVersion!.id}/worksheet/export.pdf`)}>
+                    Export PDF
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => downloadFile(`/lesson-plans/${planId}/versions/${displayedVersion!.id}/worksheet/export.docx`)}>
+                    Export DOCX
+                  </Button>
+                </div>
+              </div>
+              <Input className="mt-3 font-medium" value={worksheet.title} onChange={(e) => updateWorksheetField("title", e.target.value)} disabled={readOnly} />
+              <textarea
+                className={`${textAreaClass} mt-2 h-16`}
+                value={worksheet.instructions}
+                onChange={(e) => updateWorksheetField("instructions", e.target.value)}
+                disabled={readOnly}
+              />
+              {WORKSHEET_QUESTION_SECTIONS.map(({ key, label }) => (
+                <div key={key} className="mt-4">
+                  <Label>{label}</Label>
+                  <div className="mt-2 flex flex-col gap-2">
+                    {(worksheet[key] as string[]).map((q, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <Input value={q} onChange={(e) => updateWorksheetQuestion(key, i, e.target.value)} disabled={readOnly} />
+                        {!readOnly && (
+                          <Button variant="outline" size="sm" className="print:hidden" onClick={() => removeWorksheetQuestion(key, i)}>
+                            Remove
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                    {!readOnly && (
+                      <Button variant="outline" size="sm" className="self-start print:hidden" onClick={() => addWorksheetQuestion(key)}>
+                        Add question
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </section>
+          )}
+
+          {homeworkTask && (
+            <section className="rounded-lg border p-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold">Homework</h2>
+                <div className="flex gap-2 print:hidden">
+                  <Button variant="outline" size="sm" disabled={readOnly || regeneratingSection === "homework"} onClick={handleRegenerateHomework}>
+                    {regeneratingSection === "homework" ? "Regenerating…" : "Regenerate"}
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => downloadFile(`/lesson-plans/${planId}/versions/${displayedVersion!.id}/homework/export.pdf`)}>
+                    Export PDF
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => downloadFile(`/lesson-plans/${planId}/versions/${displayedVersion!.id}/homework/export.docx`)}>
+                    Export DOCX
+                  </Button>
+                </div>
+              </div>
+              <Input className="mt-3 font-medium" value={homeworkTask.title} onChange={(e) => updateHomeworkField("title", e.target.value)} disabled={readOnly} />
+              <textarea
+                className={`${textAreaClass} mt-2 h-16`}
+                value={homeworkTask.instructions}
+                onChange={(e) => updateHomeworkField("instructions", e.target.value)}
+                disabled={readOnly}
+              />
+              <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+                <Label>Estimated minutes</Label>
+                <Input
+                  type="number"
+                  className="w-20"
+                  value={homeworkTask.estimated_minutes}
+                  onChange={(e) => updateHomeworkField("estimated_minutes", Number(e.target.value))}
+                  disabled={readOnly}
+                />
+              </div>
+              <div className="mt-4 flex flex-col gap-2">
+                {homeworkTask.tasks.map((task, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <Input value={task} onChange={(e) => updateHomeworkTaskItem(i, e.target.value)} disabled={readOnly} />
+                    {!readOnly && (
+                      <Button variant="outline" size="sm" className="print:hidden" onClick={() => removeHomeworkTask(i)}>
+                        Remove
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                {!readOnly && (
+                  <Button variant="outline" size="sm" className="self-start print:hidden" onClick={addHomeworkTask}>
+                    Add task
+                  </Button>
+                )}
+              </div>
+            </section>
+          )}
+
+          {displayedVersion && displayedVersion.resource_ids.length > 0 && (
+            <section className="rounded-lg border p-4 print:hidden">
+              <h2 className="text-lg font-semibold">Resources used</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Automatically matched from your resource library for this lesson.</p>
+              <ul className="mt-2 list-disc pl-5 text-sm">
+                {displayedVersion.resource_ids.map((id) => (
+                  <li key={id}>{resources.find((r) => r.id === id)?.display_name ?? "Untitled resource"}</li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {language === "bn" && (
+            <section className="rounded-lg border p-4">
+              <h2 className="text-lg font-semibold">বাংলা অনুবাদ (Bangla translation)</h2>
+              {translating && <p className="mt-2 text-sm text-muted-foreground">Translating…</p>}
+              {!translating && displayedVersion?.translation_bn && (
+                <div className="mt-2 flex flex-col gap-4 text-sm">
+                  <div>
+                    <p className="font-medium">{displayedVersion.translation_bn.lesson.title}</p>
+                    <p className="mt-1 text-muted-foreground">{displayedVersion.translation_bn.lesson.overview}</p>
+                  </div>
+                  <div>
+                    <Label>Learning objectives</Label>
+                    <ul className="mt-1 list-disc pl-5">
+                      {displayedVersion.translation_bn.lesson.learning_objectives.map((o, i) => (
+                        <li key={i}>{o}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <Label>Teacher explanation</Label>
+                    <p className="mt-1">{displayedVersion.translation_bn.lesson.teacher_explanation}</p>
+                  </div>
+                  <div>
+                    <Label>Differentiation</Label>
+                    <p className="mt-1">সহায়তা (Support): {displayedVersion.translation_bn.lesson.differentiation.support}</p>
+                    <p className="mt-1">মূল (Core): {displayedVersion.translation_bn.lesson.differentiation.core}</p>
+                    <p className="mt-1">গভীরতা (Greater depth): {displayedVersion.translation_bn.lesson.differentiation.greater_depth}</p>
+                  </div>
+                  <div>
+                    <Label>Homework note</Label>
+                    <p className="mt-1">{displayedVersion.translation_bn.lesson.homework}</p>
+                  </div>
+                  {displayedVersion.translation_bn.worksheet && (
+                    <div>
+                      <Label>{displayedVersion.translation_bn.worksheet.title}</Label>
+                      <p className="mt-1 text-muted-foreground">{displayedVersion.translation_bn.worksheet.instructions}</p>
+                    </div>
+                  )}
+                  {displayedVersion.translation_bn.homework && (
+                    <div>
+                      <Label>{displayedVersion.translation_bn.homework.title}</Label>
+                      <ul className="mt-1 list-disc pl-5">
+                        {displayedVersion.translation_bn.homework.tasks.map((t, i) => (
+                          <li key={i}>{t}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {displayedVersion.safeguarding_flagged && (
+                    <div>
+                      <Label>Safeguarding / নিরাপত্তা</Label>
+                      <p className="mt-1 text-destructive">{displayedVersion.safeguarding_notes}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </section>
+          )}
         </div>
       </div>
 

@@ -97,3 +97,41 @@ def test_a_teacher_cannot_see_rename_download_or_delete_another_teachers_resourc
 
 def test_resource_endpoints_require_authentication(client, storage):
     assert client.get("/api/v1/resources").status_code == 401
+
+
+def _seed_subject_and_year_group(db_session):
+    from app.models.curriculum import Curriculum, KeyStage, Subject, YearGroup
+
+    curriculum = Curriculum(code="ENC", name="English National Curriculum", country="England")
+    db_session.add(curriculum)
+    db_session.flush()
+    key_stage = KeyStage(curriculum_id=curriculum.id, code="KS1", name="Key Stage 1", sort_order=1)
+    db_session.add(key_stage)
+    db_session.flush()
+    year_group = YearGroup(key_stage_id=key_stage.id, code="Y2", name="Year 2", sort_order=1)
+    subject = Subject(curriculum_id=curriculum.id, code="SCI", name="Science")
+    db_session.add_all([year_group, subject])
+    db_session.commit()
+    return subject, year_group
+
+
+def test_upload_and_tag_a_resource_with_subject_and_year_group(client, storage, db_session):
+    teacher = register_teacher(client)
+    headers = auth_headers(teacher)
+    subject, year_group = _seed_subject_and_year_group(db_session)
+
+    upload = client.post(
+        "/api/v1/resources",
+        files={"file": ("mixtures.txt", io.BytesIO(b"Separating mixtures notes."), "text/plain")},
+        data={"subject_id": str(subject.id), "year_group_id": str(year_group.id)},
+        headers=headers,
+    )
+    assert upload.status_code == 201, upload.text
+    assert upload.json()["subject_id"] == str(subject.id)
+    assert upload.json()["year_group_id"] == str(year_group.id)
+
+    resource_id = upload.json()["id"]
+    retag = client.patch(f"/api/v1/resources/{resource_id}/tags", json={"subject_id": None}, headers=headers)
+    assert retag.status_code == 200
+    assert retag.json()["subject_id"] is None
+    assert retag.json()["year_group_id"] == str(year_group.id)

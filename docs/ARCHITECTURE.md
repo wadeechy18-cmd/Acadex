@@ -72,31 +72,75 @@ All tables use UUID primary keys and `created_at`/`updated_at` timestamps
 
 ## The AI Lesson Plan Builder
 
-A teacher fills in subject / year group / topic (from the curriculum browse
-API, or free text) / duration / ability level / objectives / instructions /
-resources to draw on. `app/services/lesson_plan_service.py` builds a prompt
-(`app/planning/lesson_generation.py`) including curriculum objectives and
-resource excerpts, calls the `AIProvider` for one structured-JSON response
-(a 19-section `LessonPlanContent` schema — never one text blob), then:
+A teacher either fills in the detailed form (subject / year group / topic /
+duration / ability level / objectives / instructions / resources to draw
+on), or types one sentence into the **quick-generate** box (e.g. "Make me a
+lesson plan for tomorrow on separating mixtures"). Both paths converge on
+`app/services/lesson_plan_service._generate_full_lesson`.
+
+**Quick-generate** (`POST /lesson-plans/quick-generate`,
+`quick_generate_from_text`) is resource-first and AI-minimal by design:
+
+1. One small AI call (`INTENT_SYSTEM_PROMPT`) extracts structured intent
+   (`app.schemas.quick_lesson.QuickLessonIntent`: subject/year-group
+   wording, topic, a raw date phrase, duration, ability level) from the
+   teacher's sentence — it never generates lesson content itself.
+2. Everything after that is deterministic Python, never AI:
+   `app/planning/date_resolution.py` resolves "tomorrow" / a weekday name /
+   an ISO date against today's real date; `app/planning/entity_matching.py`
+   matches the extracted wording against the teacher's real
+   Subject/YearGroup/CurriculumTopic rows (falling back to the subject/year
+   group of the teacher's most recently created plan when unspecified, and
+   a 422 — never a guess — when neither can be resolved);
+   `app/planning/resource_matching.py` then searches the teacher's own
+   resource library (tag match on `Resource.subject_id`/`year_group_id`
+   plus a keyword-overlap fallback for untagged files) and returns only the
+   handful of relevant resources — the full library is never sent to the
+   model.
+
+**Generation** (shared by both entry points) builds a prompt
+(`app/planning/lesson_generation.py`) from curriculum objectives and the
+matched resource excerpts, calls the `AIProvider` for one structured-JSON
+lesson (a 19-section `LessonPlanContent` schema — never one text blob),
+then makes two further small, single-purpose calls for a **worksheet**
+(`WorksheetContent`: recall/understanding/application/challenge questions)
+and **homework** (`HomeworkContent`: instructions, tasks, estimated
+minutes) — generated automatically with every lesson, never a separate
+ask. After generation:
 
 1. **Normalizes the timeline** (`app/planning/timeline.py`) against the
    requested duration — the model is asked to produce a timeline spanning
    the full lesson, but this is verified and repaired deterministically
    rather than trusted at face value.
-2. **Runs the safeguarding check** (`app/planning/safeguarding.py`) — a
-   narrow, keyword-based flag for human review. It never blocks or edits
-   content and never claims to guarantee legal or policy compliance; it's a
-   software safeguard, not a substitute for school policy or professional
-   judgement.
-3. Persists a new `LessonPlanVersion`.
+2. **Runs the safeguarding check** (`app/planning/safeguarding.py`) over
+   the lesson, worksheet and homework text together — a keyword-based flag
+   (self-harm, weapons, sexual content, extremism, substance misuse, unsafe
+   practical activities/equipment, activities needing a risk assessment or
+   school permission, online safety/personal information risk, one-to-one
+   or physical contact risk, bullying, and discriminatory content) for
+   human review. It never blocks or edits content and never claims to
+   guarantee legal or policy compliance; it's a software safeguard, not a
+   substitute for school policy or professional judgement.
+3. Persists a new `LessonPlanVersion` (content, worksheet, homework
+   together).
 
-Editing supports save-in-place (current version only), save-as-new-version,
-restoring an old version (copies its content into a new version — history is
-never overwritten), duplicating a whole plan, and regenerating a single
-section (via a one-field Pydantic schema built on the fly with
-`pydantic.create_model`, so a regeneration call can never touch any other
-section). Export to PDF/DOCX (`app/export/`) and print are built against the
-same structured content.
+Editing supports save-in-place (current version only, including edits to
+the worksheet/homework), save-as-new-version, restoring an old version
+(copies its content into a new version — history is never overwritten),
+duplicating a whole plan, and regenerating a single lesson section, the
+whole worksheet, or the whole homework independently (each via a
+single-purpose schema, so a regeneration call can never touch anything
+else). Export to PDF/DOCX (`app/export/`) and print are built against the
+same structured content, for the lesson, worksheet and homework
+independently.
+
+**Bangla translation**: a teacher can request a বাংলা translation of any
+version (`POST .../translate`, `app/planning/translation.py`) — one AI
+call producing the same structured shape in Bangla (preserving formulas,
+units, numbers and curriculum codes untouched, and giving technical terms
+as "বাংলা (English)"), cached on the version (`translation_bn`) so
+switching the language toggle back and forth never re-triggers an AI call.
+The English original is never mutated.
 
 ## Timetable & absence/cover automation
 

@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.models.resource import CONTENT_TYPE_TO_KIND, ExtractionStatus, Resource, ResourceKind
 from app.models.user import User
+from app.schemas.resource import ResourceTagRequest
 from app.planning.text_extraction import TextExtractionError, clean_text, extract_text
 from app.storage.base import (
     ALLOWED_DOCUMENT_TYPES,
@@ -40,6 +41,8 @@ def upload_resource(
     filename: str,
     content_type: str,
     display_name: str | None,
+    subject_id: uuid.UUID | None = None,
+    year_group_id: uuid.UUID | None = None,
 ) -> Resource:
     kind = _validate_upload(content_type, len(file_bytes))
     storage_key = storage.save(file_bytes, filename, content_type, folder=f"resources/{user.id}")
@@ -53,6 +56,8 @@ def upload_resource(
         kind=kind,
         file_size_bytes=len(file_bytes),
         extraction_status=ExtractionStatus.PENDING if kind in _EXTRACTABLE_KINDS else ExtractionStatus.NOT_APPLICABLE,
+        subject_id=subject_id,
+        year_group_id=year_group_id,
     )
 
     if kind in _EXTRACTABLE_KINDS:
@@ -88,6 +93,18 @@ def get_owned_resource(db: Session, user: User, resource_id: uuid.UUID) -> Resou
 def rename_resource(db: Session, user: User, resource_id: uuid.UUID, display_name: str) -> Resource:
     resource = get_owned_resource(db, user, resource_id)
     resource.display_name = display_name
+    db.commit()
+    db.refresh(resource)
+    return resource
+
+
+def tag_resource(db: Session, user: User, resource_id: uuid.UUID, payload: ResourceTagRequest) -> Resource:
+    resource = get_owned_resource(db, user, resource_id)
+    fields_set = payload.model_fields_set
+    if "subject_id" in fields_set:
+        resource.subject_id = payload.subject_id
+    if "year_group_id" in fields_set:
+        resource.year_group_id = payload.year_group_id
     db.commit()
     db.refresh(resource)
     return resource

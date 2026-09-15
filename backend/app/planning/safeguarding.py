@@ -14,7 +14,7 @@ lessons. Flagging errs toward under- rather than over-triggering because
 a flag's only effect is "a human should look at this before using it."
 """
 
-from app.schemas.lesson_plan_content import LessonPlanContent
+from app.schemas.lesson_plan_content import HomeworkContent, LessonPlanContent, WorksheetContent
 
 _FLAGGED_TERMS: dict[str, list[str]] = {
     "self-harm or suicide": ["self-harm", "how to self harm", "suicide method", "ways to end your life"],
@@ -22,10 +22,56 @@ _FLAGGED_TERMS: dict[str, list[str]] = {
     "sexual content": ["explicit sexual", "pornograph", "sexual acts"],
     "extremism or hate": ["terrorist recruitment", "racial slur", "hate speech instructions", "extremist propaganda"],
     "substance misuse instructions": ["how to make drugs", "how to buy drugs", "drug dealing instructions"],
+    "unsafe practical activity or equipment": [
+        "without adult supervision",
+        "without safety goggles",
+        "without protective gloves",
+        "without ppe",
+        "handle broken glass with bare hands",
+        "taste the chemical",
+        "inhale the fumes directly",
+        "unsupervised experiment",
+        "naked flame unattended",
+    ],
+    "activity requiring formal risk assessment or school permission": [
+        "off-site visit",
+        "off site trip",
+        "school trip",
+        "field trip",
+        "requires parental consent",
+        "requires signed permission",
+        "offsite activity",
+    ],
+    "online safety or personal information risk": [
+        "share your home address",
+        "share your phone number",
+        "post your full name online",
+        "meet someone you met online",
+        "share personal photos online",
+        "share your password",
+    ],
+    "inappropriate one-to-one or physical contact": [
+        "alone with a pupil",
+        "one-to-one in a closed room",
+        "physical restraint",
+        "inappropriate touching",
+    ],
+    "bullying-related risk": [
+        "encourage pupils to mock",
+        "target a pupil publicly",
+        "humiliate in front of the class",
+        "single out a pupil to ridicule",
+    ],
+    "discriminatory or harmful content": [
+        "certain races are inferior",
+        "certain religions are wrong",
+        "gender stereotypes are always true",
+        "mock a pupil's disability",
+    ],
 }
 
 
-def _all_text(content: LessonPlanContent) -> str:
+def _all_text(content: LessonPlanContent, worksheet: WorksheetContent | None, homework_task: HomeworkContent | None) -> str:
     parts = [
         content.title,
         content.overview,
@@ -50,12 +96,33 @@ def _all_text(content: LessonPlanContent) -> str:
         *(entry.activity for entry in content.timeline),
         *(entry.description for entry in content.timeline),
     ]
+    if worksheet is not None:
+        parts.extend(
+            [
+                worksheet.title,
+                worksheet.instructions,
+                *worksheet.recall_questions,
+                *worksheet.understanding_questions,
+                *worksheet.application_questions,
+                *worksheet.challenge_questions,
+            ]
+        )
+    if homework_task is not None:
+        parts.extend([homework_task.title, homework_task.instructions, *homework_task.tasks])
     return " ".join(parts).lower()
 
 
-def scan_for_safeguarding_concerns(content: LessonPlanContent) -> tuple[bool, str | None]:
-    """Returns (flagged, note). `note` is None when nothing was flagged."""
-    text = _all_text(content)
+def scan_for_safeguarding_concerns(
+    content: LessonPlanContent,
+    worksheet: WorksheetContent | None = None,
+    homework_task: HomeworkContent | None = None,
+) -> tuple[bool, str | None]:
+    """Returns (flagged, note). `note` is None when nothing was flagged.
+    Scans the lesson content plus, when generated, the worksheet and
+    homework -- a concerning term in either of those must surface the same
+    review flag as one in the lesson body itself.
+    """
+    text = _all_text(content, worksheet, homework_task)
     matched_categories = sorted({category for category, terms in _FLAGGED_TERMS.items() if any(term in text for term in terms)})
 
     if not matched_categories:

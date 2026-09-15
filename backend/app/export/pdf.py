@@ -6,7 +6,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import cm
 from reportlab.platypus import ListFlowable, ListItem, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-from app.schemas.lesson_plan_content import LessonPlanContent
+from app.schemas.lesson_plan_content import HomeworkContent, LessonPlanContent, WorksheetContent
 
 styles = getSampleStyleSheet()
 
@@ -69,5 +69,42 @@ def render_lesson_plan_pdf(content: LessonPlanContent, subject_name: str, year_g
     )
     story.append(table)
 
+    doc.build(story)
+    return buffer.getvalue()
+
+
+def render_worksheet_pdf(worksheet: WorksheetContent, subject_name: str, year_group_name: str) -> bytes:
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=1.5 * cm, bottomMargin=1.5 * cm)
+    story = [Paragraph(worksheet.title, styles["Title"]), Paragraph(f"{subject_name} · {year_group_name}", styles["Normal"]), Spacer(1, 12)]
+
+    def section(heading: str, questions: list[str]):
+        story.append(Paragraph(heading, styles["Heading2"]))
+        story.append(_bullets(questions) if questions else Paragraph("-", styles["Normal"]))
+        story.append(Spacer(1, 8))
+
+    story.append(Paragraph(worksheet.instructions, styles["Normal"]))
+    story.append(Spacer(1, 8))
+    section("Recall questions", worksheet.recall_questions)
+    section("Understanding questions", worksheet.understanding_questions)
+    section("Application questions", worksheet.application_questions)
+    section("Challenge questions", worksheet.challenge_questions)
+
+    doc.build(story)
+    return buffer.getvalue()
+
+
+def render_homework_pdf(homework: HomeworkContent, subject_name: str, year_group_name: str) -> bytes:
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=1.5 * cm, bottomMargin=1.5 * cm)
+    story = [
+        Paragraph(homework.title, styles["Title"]),
+        Paragraph(f"{subject_name} · {year_group_name} · estimated {homework.estimated_minutes} minutes", styles["Normal"]),
+        Spacer(1, 12),
+        Paragraph(homework.instructions, styles["Normal"]),
+        Spacer(1, 8),
+        Paragraph("Tasks", styles["Heading2"]),
+        _bullets(homework.tasks) if homework.tasks else Paragraph("-", styles["Normal"]),
+    ]
     doc.build(story)
     return buffer.getvalue()

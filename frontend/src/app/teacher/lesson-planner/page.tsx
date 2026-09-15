@@ -30,6 +30,11 @@ const ABILITY_LEVELS: { value: AbilityLevel; label: string }[] = [
 export default function LessonPlannerPage() {
   const router = useRouter();
 
+  const [quickText, setQuickText] = useState("");
+  const [quickSubmitting, setQuickSubmitting] = useState(false);
+  const [quickError, setQuickError] = useState<string | null>(null);
+  const [showDetailedForm, setShowDetailedForm] = useState(false);
+
   const [curricula, setCurricula] = useState<CurriculumSummary[]>([]);
   const [keyStages, setKeyStages] = useState<KeyStageSummary[]>([]);
   const [yearGroups, setYearGroups] = useState<YearGroupSummary[]>([]);
@@ -96,6 +101,32 @@ export default function LessonPlannerPage() {
     setSelectedResourceIds((prev) => (prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id]));
   }
 
+  async function handleQuickSubmit(e: FormEvent) {
+    e.preventDefault();
+    setQuickError(null);
+    if (!quickText.trim()) return;
+
+    setQuickSubmitting(true);
+    try {
+      const plan = await apiFetch<LessonPlan>(
+        "/lesson-plans/quick-generate",
+        { method: "POST", body: JSON.stringify({ text: quickText.trim() }) },
+        true
+      );
+      router.push(`/teacher/lesson-plans/${plan.id}`);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 503) {
+        setQuickError("AI lesson generation isn't configured on this server yet.");
+      } else if (err instanceof ApiError && err.status === 422) {
+        setQuickError(err.message);
+      } else {
+        setQuickError(err instanceof ApiError ? err.message : "Couldn't generate a lesson plan from that.");
+      }
+    } finally {
+      setQuickSubmitting(false);
+    }
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
@@ -145,9 +176,34 @@ export default function LessonPlannerPage() {
     <main className="mx-auto max-w-2xl p-8">
       <h1 className="text-2xl font-bold">AI Lesson Plan Builder</h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Tell Acadex what you're teaching and it will draft a complete, structured lesson plan you can edit.
+        Tell Acadex what you're teaching. It searches your resource library, matches the curriculum, and builds a
+        complete lesson plan with a worksheet and homework -- no need to pick files or fill in a form.
       </p>
 
+      <form onSubmit={handleQuickSubmit} className="mt-6 flex flex-col gap-3 rounded-lg border bg-muted/20 p-4">
+        <Label htmlFor="quick-text">What do you want to teach?</Label>
+        <textarea
+          id="quick-text"
+          className={`${selectClass} h-20`}
+          placeholder="e.g. Make me a lesson plan for tomorrow on separating mixtures."
+          value={quickText}
+          onChange={(e) => setQuickText(e.target.value)}
+        />
+        {quickError && <p className="text-sm text-destructive">{quickError}</p>}
+        <Button type="submit" disabled={quickSubmitting || !quickText.trim()}>
+          {quickSubmitting ? "Generating…" : "Generate"}
+        </Button>
+      </form>
+
+      <button
+        type="button"
+        className="mt-6 text-sm text-muted-foreground underline"
+        onClick={() => setShowDetailedForm((v) => !v)}
+      >
+        {showDetailedForm ? "Hide the detailed form" : "Prefer to fill in the details yourself?"}
+      </button>
+
+      {showDetailedForm && (
       <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -260,7 +316,10 @@ export default function LessonPlannerPage() {
 
         {resources.length > 0 && (
           <div>
-            <Label>Use these resources (optional)</Label>
+            <Label>Pick specific resources (optional)</Label>
+            <p className="text-xs text-muted-foreground">
+              Leave unchecked and Acadex will automatically search your resource library for what's relevant.
+            </p>
             <div className="mt-2 flex flex-col gap-1 rounded-md border p-3">
               {resources.map((r) => (
                 <label key={r.id} className="flex items-center gap-2 text-sm">
@@ -282,6 +341,7 @@ export default function LessonPlannerPage() {
           {submitting ? "Generating…" : "Generate lesson plan"}
         </Button>
       </form>
+      )}
     </main>
   );
 }

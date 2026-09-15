@@ -1,10 +1,10 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, Field
 
 from app.models.lesson_plan import AbilityLevel, GenerationKind
-from app.schemas.lesson_plan_content import LessonPlanContent
+from app.schemas.lesson_plan_content import HomeworkContent, LessonPlanContent, TranslatedContent, WorksheetContent
 
 
 class GenerateLessonPlanRequest(BaseModel):
@@ -25,6 +25,8 @@ class RegenerateSectionRequest(BaseModel):
 
 class SaveVersionRequest(BaseModel):
     content: LessonPlanContent
+    worksheet: WorksheetContent | None = None
+    homework_task: HomeworkContent | None = None
 
 
 class AssignClassRequest(BaseModel):
@@ -35,6 +37,9 @@ class LessonPlanVersionResponse(BaseModel):
     id: uuid.UUID
     version_number: int
     content: LessonPlanContent
+    worksheet: WorksheetContent | None
+    homework_task: HomeworkContent | None
+    translation_bn: TranslatedContent | None
     generation_kind: GenerationKind
     generation_notes: str | None
     safeguarding_flagged: bool
@@ -52,6 +57,7 @@ class LessonPlanResponse(BaseModel):
     topic_title: str
     duration_minutes: int
     ability_level: AbilityLevel
+    scheduled_date: date | None
     class_id: uuid.UUID | None
     class_name: str | None
     created_at: datetime
@@ -67,6 +73,7 @@ class LessonPlanSummaryResponse(BaseModel):
     topic_title: str
     duration_minutes: int
     ability_level: AbilityLevel
+    scheduled_date: date | None
     class_id: uuid.UUID | None
     class_name: str | None
     owner_display_name: str

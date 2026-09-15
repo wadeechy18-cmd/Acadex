@@ -41,6 +41,12 @@ class Resource(UUIDPKMixin, TimestampMixin, Base):
     (see the School product's "Resources" sidebar item) are a later,
     additive extension (a nullable school_id column), not part of this
     shape yet.
+
+    subject_id/year_group_id are optional tags a teacher can set at upload
+    (or later) so the resource-first retrieval in
+    app/planning/resource_matching.py can narrow the library before falling
+    back to a text-overlap search -- untagged resources are still
+    searchable, just less precisely.
     """
 
     __tablename__ = "resources"
@@ -59,3 +65,9 @@ class Resource(UUIDPKMixin, TimestampMixin, Base):
     )
     extracted_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     extraction_error: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    subject_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("subjects.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    year_group_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("year_groups.id", ondelete="SET NULL"), nullable=True, index=True
+    )
