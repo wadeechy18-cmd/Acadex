@@ -248,3 +248,151 @@ def test_timetable_endpoints_are_isolated_between_schools(client, db_session):
 
     res = client.get(f"/api/v1/schools/{school_a}/rooms", headers=auth_headers(admin_b))
     assert res.status_code == 403
+
+
+def _weekly_slots(client, admin, school_id):
+    """Monday through Friday, one period each -- enough for a 5-period-a-week requirement."""
+    slots = []
+    for day in range(5):
+        slot = client.post(
+            f"/api/v1/schools/{school_id}/time-slots",
+            json={"day_of_week": day, "start_time": "09:00:00", "end_time": "09:45:00", "label": f"Day {day} Period 1"},
+            headers=auth_headers(admin),
+        ).json()
+        slots.append(slot)
+    return slots
+
+
+def test_add_list_and_delete_requirement(client, db_session):
+    subject = _seed_subject(db_session)
+    admin, teacher, school_id = _school_with_teacher(client)
+    year, room, slot, timetable = _setup_grid(client, admin, school_id)
+    class_ = client.post("/api/v1/classes", json={"name": "Year 2A"}, headers=auth_headers(teacher)).json()
+
+    add = client.post(
+        f"/api/v1/schools/{school_id}/timetables/{timetable['id']}/requirements",
+        json={"class_id": class_["id"], "subject_id": str(subject.id), "periods_per_week": 3},
+        headers=auth_headers(admin),
+    )
+    assert add.status_code == 201, add.text
+    assert add.json()["periods_per_week"] == 3
+    requirement_id = add.json()["id"]
+
+    listing = client.get(f"/api/v1/schools/{school_id}/timetables/{timetable['id']}/requirements", headers=auth_headers(admin))
+    assert len(listing.json()) == 1
+
+    delete = client.delete(f"/api/v1/schools/{school_id}/timetables/{timetable['id']}/requirements/{requirement_id}", headers=auth_headers(admin))
+    assert delete.status_code == 204
+    assert client.get(f"/api/v1/schools/{school_id}/timetables/{timetable['id']}/requirements", headers=auth_headers(admin)).json() == []
+
+
+def test_adding_the_same_requirement_twice_updates_periods_per_week(client, db_session):
+    subject = _seed_subject(db_session)
+    admin, teacher, school_id = _school_with_teacher(client)
+    year, room, slot, timetable = _setup_grid(client, admin, school_id)
+    class_ = client.post("/api/v1/classes", json={"name": "Year 2A"}, headers=auth_headers(teacher)).json()
+
+    client.post(
+        f"/api/v1/schools/{school_id}/timetables/{timetable['id']}/requirements",
+        json={"class_id": class_["id"], "subject_id": str(subject.id), "periods_per_week": 2},
+        headers=auth_headers(admin),
+    )
+    second = client.post(
+        f"/api/v1/schools/{school_id}/timetables/{timetable['id']}/requirements",
+        json={"class_id": class_["id"], "subject_id": str(subject.id), "periods_per_week": 4},
+        headers=auth_headers(admin),
+    )
+    assert second.status_code == 201
+    assert second.json()["periods_per_week"] == 4
+
+    listing = client.get(f"/api/v1/schools/{school_id}/timetables/{timetable['id']}/requirements", headers=auth_headers(admin))
+    assert len(listing.json()) == 1
+
+
+def test_generate_fills_the_timetable_from_requirements(client, db_session):
+    subject = _seed_subject(db_session)
+    admin, teacher, school_id = _school_with_teacher(client)
+    year, room, _slot, timetable = _setup_grid(client, admin, school_id)
+    _weekly_slots(client, admin, school_id)  # 5 more slots, one per weekday
+    class_ = client.post("/api/v1/classes", json={"name": "Year 2A"}, headers=auth_headers(teacher)).json()
+
+    client.post(
+        f"/api/v1/schools/{school_id}/teachers/{teacher['user']['id']}/qualifications",
+        json={"subject_id": str(subject.id)},
+        headers=auth_headers(admin),
+    )
+    client.post(
+        f"/api/v1/schools/{school_id}/timetables/{timetable['id']}/requirements",
+        json={"class_id": class_["id"], "subject_id": str(subject.id), "periods_per_week": 3},
+        headers=auth_headers(admin),
+    )
+
+    result = client.post(f"/api/v1/schools/{school_id}/timetables/{timetable['id']}/generate", headers=auth_headers(admin))
+    assert result.status_code == 200, result.text
+    body = result.json()
+    assert len(body["entries"]) == 3
+    assert body["requirements_summary"][0]["scheduled_periods"] == 3
+    assert body["requirements_summary"][0]["requested_periods"] == 3
+    assert all(e["teacher_user_id"] == teacher["user"]["id"] for e in body["entries"])
+
+    listing = client.get(f"/api/v1/schools/{school_id}/timetables/{timetable['id']}/entries", headers=auth_headers(admin))
+    assert len(listing.json()) == 3
+
+
+def test_generate_reports_a_shortfall_when_no_qualified_teacher(client, db_session):
+    subject = _seed_subject(db_session)
+    admin, teacher, school_id = _school_with_teacher(client)
+    year, room, slot, timetable = _setup_grid(client, admin, school_id)
+    class_ = client.post("/api/v1/classes", json={"name": "Year 2A"}, headers=auth_headers(teacher)).json()
+
+    # No qualification added -- nobody can teach this subject.
+    client.post(
+        f"/api/v1/schools/{school_id}/timetables/{timetable['id']}/requirements",
+        json={"class_id": class_["id"], "subject_id": str(subject.id), "periods_per_week": 2},
+        headers=auth_headers(admin),
+    )
+
+    result = client.post(f"/api/v1/schools/{school_id}/timetables/{timetable['id']}/generate", headers=auth_headers(admin))
+    assert result.status_code == 200
+    summary = result.json()["requirements_summary"][0]
+    assert summary["scheduled_periods"] == 0
+    assert summary["requested_periods"] == 2
+    assert result.json()["entries"] == []
+
+
+def test_generate_replaces_existing_entries(client, db_session):
+    subject = _seed_subject(db_session)
+    admin, teacher, school_id = _school_with_teacher(client)
+    year, room, slot, timetable = _setup_grid(client, admin, school_id)
+    class_ = client.post("/api/v1/classes", json={"name": "Year 2A"}, headers=auth_headers(teacher)).json()
+
+    # A manually-created entry that generation should clear away.
+    client.post(
+        f"/api/v1/schools/{school_id}/timetables/{timetable['id']}/entries",
+        json={"time_slot_id": slot["id"], "teacher_user_id": teacher["user"]["id"], "subject_id": str(subject.id), "room_id": room["id"]},
+        headers=auth_headers(admin),
+    )
+    client.post(
+        f"/api/v1/schools/{school_id}/teachers/{teacher['user']['id']}/qualifications",
+        json={"subject_id": str(subject.id)},
+        headers=auth_headers(admin),
+    )
+    client.post(
+        f"/api/v1/schools/{school_id}/timetables/{timetable['id']}/requirements",
+        json={"class_id": class_["id"], "subject_id": str(subject.id), "periods_per_week": 1},
+        headers=auth_headers(admin),
+    )
+
+    client.post(f"/api/v1/schools/{school_id}/timetables/{timetable['id']}/generate", headers=auth_headers(admin))
+    listing = client.get(f"/api/v1/schools/{school_id}/timetables/{timetable['id']}/entries", headers=auth_headers(admin))
+    # Exactly one entry -- the manual one was cleared, replaced by the generated one.
+    assert len(listing.json()) == 1
+    assert listing.json()[0]["class_id"] == class_["id"]
+
+
+def test_generate_without_requirements_is_rejected(client, db_session):
+    admin, teacher, school_id = _school_with_teacher(client)
+    year, room, slot, timetable = _setup_grid(client, admin, school_id)
+
+    result = client.post(f"/api/v1/schools/{school_id}/timetables/{timetable['id']}/generate", headers=auth_headers(admin))
+    assert result.status_code == 400

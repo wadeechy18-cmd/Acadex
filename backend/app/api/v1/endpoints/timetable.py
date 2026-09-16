@@ -7,15 +7,28 @@ from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.class_ import Class
 from app.models.curriculum import Subject
-from app.models.timetable import AcademicYear, Room, TeacherAvailability, TeacherSubjectQualification, TimeSlot, Timetable, TimetableEntry
+from app.models.timetable import (
+    AcademicYear,
+    ClassSubjectRequirement,
+    Room,
+    TeacherAvailability,
+    TeacherSubjectQualification,
+    TimeSlot,
+    Timetable,
+    TimetableEntry,
+)
 from app.models.user import User
 from app.schemas.timetable import (
     AcademicYearCreateRequest,
     AcademicYearResponse,
     AvailabilityResponse,
     AvailabilitySetRequest,
+    ClassSubjectRequirementCreateRequest,
+    ClassSubjectRequirementResponse,
+    GenerateTimetableResult,
     QualificationCreateRequest,
     QualificationResponse,
+    RequirementScheduleSummary,
     RoomCreateRequest,
     RoomResponse,
     TimeSlotCreateRequest,
@@ -174,6 +187,76 @@ def remove_qualification(
     school_id: uuid.UUID, qualification_id: uuid.UUID, db: Session = Depends(get_db), user: User = Depends(get_current_user)
 ) -> None:
     timetable_service.remove_qualification(db, user, school_id, qualification_id)
+
+
+def _requirement_response(db: Session, requirement: ClassSubjectRequirement) -> ClassSubjectRequirementResponse:
+    class_ = db.get(Class, requirement.class_id)
+    subject = db.get(Subject, requirement.subject_id)
+    return ClassSubjectRequirementResponse(
+        id=requirement.id,
+        class_id=requirement.class_id,
+        class_name=class_.name,
+        subject_id=requirement.subject_id,
+        subject_name=subject.name,
+        periods_per_week=requirement.periods_per_week,
+    )
+
+
+@router.post(
+    "/{school_id}/timetables/{timetable_id}/requirements", response_model=ClassSubjectRequirementResponse, status_code=status.HTTP_201_CREATED
+)
+def add_requirement(
+    school_id: uuid.UUID,
+    timetable_id: uuid.UUID,
+    payload: ClassSubjectRequirementCreateRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> ClassSubjectRequirementResponse:
+    requirement = timetable_service.add_requirement(db, user, school_id, timetable_id, payload)
+    return _requirement_response(db, requirement)
+
+
+@router.get("/{school_id}/timetables/{timetable_id}/requirements", response_model=list[ClassSubjectRequirementResponse])
+def list_requirements(
+    school_id: uuid.UUID, timetable_id: uuid.UUID, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+) -> list[ClassSubjectRequirementResponse]:
+    return [_requirement_response(db, r) for r in timetable_service.list_requirements(db, user, school_id, timetable_id)]
+
+
+@router.delete("/{school_id}/timetables/{timetable_id}/requirements/{requirement_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_requirement(
+    school_id: uuid.UUID, timetable_id: uuid.UUID, requirement_id: uuid.UUID, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+) -> None:
+    timetable_service.delete_requirement(db, user, school_id, timetable_id, requirement_id)
+
+
+@router.post("/{school_id}/timetables/{timetable_id}/generate", response_model=GenerateTimetableResult)
+def generate_timetable(
+    school_id: uuid.UUID, timetable_id: uuid.UUID, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+) -> GenerateTimetableResult:
+    """Replaces every entry on this timetable with a freshly auto-generated
+    schedule built from the class/subject requirements, teacher
+    qualifications and availability already set up for this school -- see
+    app/planning/timetable_generation.py. Never AI: deterministic
+    constraint solving, same as the substitution optimizer.
+    """
+    entries, requirements, result = timetable_service.generate_timetable(db, user, school_id, timetable_id)
+    requirement_by_id = {str(r.id): r for r in requirements}
+    summary = []
+    for requirement_id, requested in result.requested_periods.items():
+        requirement = requirement_by_id[requirement_id]
+        class_ = db.get(Class, requirement.class_id)
+        subject = db.get(Subject, requirement.subject_id)
+        summary.append(
+            RequirementScheduleSummary(
+                requirement_id=requirement.id,
+                class_name=class_.name,
+                subject_name=subject.name,
+                requested_periods=requested,
+                scheduled_periods=result.scheduled_periods.get(requirement_id, 0),
+            )
+        )
+    return GenerateTimetableResult(entries=[_entry_response(db, e) for e in entries], requirements_summary=summary)
 
 
 @router.put("/{school_id}/teachers/{teacher_id}/availability", response_model=AvailabilityResponse)

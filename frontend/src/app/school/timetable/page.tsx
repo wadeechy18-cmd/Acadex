@@ -8,8 +8,11 @@ import { apiFetch, ApiError } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
 import type {
   AcademicYear,
+  ClassSubjectRequirement,
   ClassSummary,
   CurriculumSummary,
+  GenerateTimetableResult,
+  RequirementScheduleSummary,
   Room,
   SchoolMember,
   SubjectSummary,
@@ -53,6 +56,13 @@ export default function SchoolTimetablePage() {
 
   const [viewTeacherId, setViewTeacherId] = useState("");
 
+  const [requirements, setRequirements] = useState<ClassSubjectRequirement[]>([]);
+  const [reqClassId, setReqClassId] = useState("");
+  const [reqSubjectId, setReqSubjectId] = useState("");
+  const [reqPeriods, setReqPeriods] = useState(3);
+  const [generating, setGenerating] = useState(false);
+  const [generationSummary, setGenerationSummary] = useState<RequirementScheduleSummary[] | null>(null);
+
   // Setup forms
   const [yearName, setYearName] = useState("");
   const [yearStart, setYearStart] = useState("");
@@ -89,9 +99,56 @@ export default function SchoolTimetablePage() {
       .catch((err) => setError(err instanceof ApiError ? err.message : "Couldn't load timetable entries."));
   }
 
+  function loadRequirements(timetableId: string) {
+    if (!school || !timetableId) return;
+    apiFetch<ClassSubjectRequirement[]>(`/schools/${school.id}/timetables/${timetableId}/requirements`, undefined, true).then(setRequirements);
+  }
+
   useEffect(() => {
-    if (selectedTimetableId) loadEntries(selectedTimetableId);
+    if (selectedTimetableId) {
+      loadEntries(selectedTimetableId);
+      loadRequirements(selectedTimetableId);
+      setGenerationSummary(null);
+    }
   }, [selectedTimetableId, school]);
+
+  async function handleAddRequirement(e: FormEvent) {
+    e.preventDefault();
+    if (!school || !selectedTimetableId || !reqClassId || !reqSubjectId) return;
+    await apiFetch(
+      `/schools/${school.id}/timetables/${selectedTimetableId}/requirements`,
+      { method: "POST", body: JSON.stringify({ class_id: reqClassId, subject_id: reqSubjectId, periods_per_week: reqPeriods }) },
+      true
+    );
+    setReqClassId("");
+    setReqSubjectId("");
+    setReqPeriods(3);
+    loadRequirements(selectedTimetableId);
+  }
+
+  async function handleDeleteRequirement(requirementId: string) {
+    if (!school || !selectedTimetableId) return;
+    await apiFetch(`/schools/${school.id}/timetables/${selectedTimetableId}/requirements/${requirementId}`, { method: "DELETE" }, true);
+    loadRequirements(selectedTimetableId);
+  }
+
+  async function handleGenerate() {
+    if (!school || !selectedTimetableId) return;
+    if (entries.length > 0 && !confirm("This replaces every lesson currently on this timetable with a freshly generated schedule. Continue?")) {
+      return;
+    }
+    setGenerating(true);
+    setError(null);
+    try {
+      const result = await apiFetch<GenerateTimetableResult>(`/schools/${school.id}/timetables/${selectedTimetableId}/generate`, { method: "POST" }, true);
+      setGenerationSummary(result.requirements_summary);
+      loadEntries(selectedTimetableId);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Couldn't generate a timetable.");
+    } finally {
+      setGenerating(false);
+    }
+  }
 
   async function handleCreateYear(e: FormEvent) {
     e.preventDefault();
@@ -305,6 +362,87 @@ export default function SchoolTimetablePage() {
           </div>
         )}
       </div>
+
+      {selectedTimetableId && (
+        <div className="mt-8 rounded-lg border p-4">
+          <h2 className="font-semibold">Auto-generate the timetable</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Tell Acadex how many periods per week each class needs of each subject, then generate -- it fills the whole
+            grid by itself, respecting teacher qualifications and availability. This is deterministic scheduling, not AI.
+          </p>
+
+          <form onSubmit={handleAddRequirement} className="mt-4 flex flex-wrap items-end gap-2">
+            <div>
+              <Label>Class</Label>
+              <select className={selectClass} value={reqClassId} onChange={(e) => setReqClassId(e.target.value)}>
+                <option value="">Select...</option>
+                {classes.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label>Subject</Label>
+              <select className={selectClass} value={reqSubjectId} onChange={(e) => setReqSubjectId(e.target.value)}>
+                <option value="">Select...</option>
+                {subjects.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label>Periods/week</Label>
+              <Input type="number" min={1} max={20} className="w-24" value={reqPeriods} onChange={(e) => setReqPeriods(Number(e.target.value))} />
+            </div>
+            <Button type="submit" size="sm">
+              Add requirement
+            </Button>
+          </form>
+
+          {requirements.length > 0 && (
+            <div className="mt-4 flex flex-col gap-1">
+              {requirements.map((r) => (
+                <div key={r.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                  <span>
+                    {r.class_name} · {r.subject_name} · {r.periods_per_week}/week
+                  </span>
+                  <Button size="sm" variant="outline" onClick={() => handleDeleteRequirement(r.id)}>
+                    Remove
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {classes.length === 0 && (
+            <p className="mt-4 text-sm text-muted-foreground">
+              No classes yet -- teachers add these from their own Classes page, then they'll appear here.
+            </p>
+          )}
+
+          <Button className="mt-4" onClick={handleGenerate} disabled={generating || requirements.length === 0}>
+            {generating ? "Generating…" : "Generate timetable"}
+          </Button>
+
+          {generationSummary && (
+            <div className="mt-4 rounded-md border bg-muted/30 p-3 text-sm">
+              <p className="font-medium">Generation results</p>
+              <ul className="mt-2 flex flex-col gap-1">
+                {generationSummary.map((s) => (
+                  <li key={s.requirement_id} className={s.scheduled_periods < s.requested_periods ? "text-destructive" : ""}>
+                    {s.class_name} · {s.subject_name}: scheduled {s.scheduled_periods} of {s.requested_periods} requested
+                    {s.scheduled_periods < s.requested_periods && " -- add more qualified teachers, availability, or time slots to fill the rest."}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
 
       {selectedTimetableId && gridRows.length > 0 && (
         <div className="mt-8 overflow-x-auto">

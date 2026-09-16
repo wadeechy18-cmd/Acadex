@@ -266,6 +266,28 @@ export interface TimetableEntry {
   room_name: string | null;
 }
 
+export interface ClassSubjectRequirement {
+  id: string;
+  class_id: string;
+  class_name: string;
+  subject_id: string;
+  subject_name: string;
+  periods_per_week: number;
+}
+
+export interface RequirementScheduleSummary {
+  requirement_id: string;
+  class_name: string;
+  subject_name: string;
+  requested_periods: number;
+  scheduled_periods: number;
+}
+
+export interface GenerateTimetableResult {
+  entries: TimetableEntry[];
+  requirements_summary: RequirementScheduleSummary[];
+}
+
 export type AvailabilityStatus = "available" | "unavailable";
 
 export interface Qualification {

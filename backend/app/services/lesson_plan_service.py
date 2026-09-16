@@ -37,6 +37,12 @@ from app.services import school_service
 
 DEFAULT_QUICK_DURATION_MINUTES = 45
 
+# Owner of every pre-authored lesson plan imported from the bundled
+# curriculum packs (scripts/seed_lesson_plan_library.py) -- an inactive
+# account (can never log in) that exists only to hold plans every teacher
+# can browse and duplicate into their own library. See get_library_plan.
+LIBRARY_OWNER_EMAIL = "curriculum-library@acadex.internal"
+
 
 def _get_subject(db: Session, subject_id: uuid.UUID) -> Subject:
     subject = db.get(Subject, subject_id)
@@ -407,6 +413,53 @@ def list_plans(
         query, subject_id=subject_id, year_group_id=year_group_id, topic=topic, date_from=date_from, date_to=date_to, class_id=class_id
     )
     return query.order_by(LessonPlan.updated_at.desc()).all()
+
+
+def _get_library_owner(db: Session) -> User | None:
+    return db.query(User).filter_by(email=LIBRARY_OWNER_EMAIL).first()
+
+
+def list_library_plans(
+    db: Session,
+    *,
+    subject_id: uuid.UUID | None = None,
+    year_group_id: uuid.UUID | None = None,
+    topic: str | None = None,
+    limit: int = 50,
+) -> list[LessonPlan]:
+    """The shared, pre-authored plans every teacher can browse (never
+    edited in place -- see duplicate_library_plan). Returns an empty list,
+    not an error, if the library hasn't been seeded on this install.
+
+    Capped at `limit` -- the full library runs into the thousands of rows
+    (every EYFS/KS1 lesson for a school year), so an unfiltered browse
+    returns a manageable first page rather than the whole thing; narrowing
+    by subject/year group/topic is how a teacher gets to a specific plan.
+    """
+    owner = _get_library_owner(db)
+    if owner is None:
+        return []
+    query = db.query(LessonPlan).filter_by(owner_user_id=owner.id)
+    query = _apply_filters(query, subject_id=subject_id, year_group_id=year_group_id, topic=topic, date_from=None, date_to=None, class_id=None)
+    return query.order_by(LessonPlan.topic_title).limit(limit).all()
+
+
+def get_library_plan(db: Session, plan_id: uuid.UUID) -> LessonPlan:
+    owner = _get_library_owner(db)
+    plan = db.query(LessonPlan).filter_by(id=plan_id).first() if owner else None
+    if not plan or plan.owner_user_id != owner.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Library lesson plan not found.")
+    return plan
+
+
+def duplicate_library_plan(db: Session, user: User, plan_id: uuid.UUID) -> LessonPlan:
+    """Copies a library plan into the requesting teacher's own plans --
+    the teacher's copy is a completely independent LessonPlan they can
+    edit, regenerate, and export like any other; the library original is
+    never modified.
+    """
+    library_plan = get_library_plan(db, plan_id)
+    return duplicate_plan(db, user, library_plan)
 
 
 def list_school_plans(

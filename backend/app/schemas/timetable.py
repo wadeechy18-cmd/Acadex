@@ -87,6 +87,34 @@ class QualificationResponse(BaseModel):
     subject_name: str
 
 
+class ClassSubjectRequirementCreateRequest(BaseModel):
+    class_id: uuid.UUID
+    subject_id: uuid.UUID
+    periods_per_week: int = Field(ge=1, le=20)
+
+
+class ClassSubjectRequirementResponse(BaseModel):
+    id: uuid.UUID
+    class_id: uuid.UUID
+    class_name: str
+    subject_id: uuid.UUID
+    subject_name: str
+    periods_per_week: int
+
+
+class RequirementScheduleSummary(BaseModel):
+    requirement_id: uuid.UUID
+    class_name: str
+    subject_name: str
+    requested_periods: int
+    scheduled_periods: int
+
+
+class GenerateTimetableResult(BaseModel):
+    entries: list[TimetableEntryResponse]
+    requirements_summary: list[RequirementScheduleSummary]
+
+
 class AvailabilitySetRequest(BaseModel):
     time_slot_id: uuid.UUID
     status: AvailabilityStatus

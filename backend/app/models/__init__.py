@@ -16,6 +16,7 @@ from app.models.task import Task, TaskPriority, TaskStatus
 from app.models.timetable import (
     AcademicYear,
     AvailabilityStatus,
+    ClassSubjectRequirement,
     Room,
     TeacherAvailability,
     TeacherSubjectQualification,
@@ -69,6 +70,7 @@ __all__ = [
     "TeacherSubjectQualification",
     "TeacherAvailability",
     "AvailabilityStatus",
+    "ClassSubjectRequirement",
     "TeacherAbsence",
     "AffectedLesson",
     "SubstitutionPlan",

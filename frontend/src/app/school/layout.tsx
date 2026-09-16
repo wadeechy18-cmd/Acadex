@@ -10,8 +10,6 @@ const NAV_ITEMS = [
   { href: "/school/dashboard", label: "Dashboard" },
   { href: "/school/teachers", label: "Teachers" },
   { href: "/school/classes", label: "Classes" },
-  { href: "/school/subjects", label: "Subjects" },
-  { href: "/school/resources", label: "Resources" },
   { href: "/school/lesson-plans", label: "Lesson Plans" },
   { href: "/school/timetable", label: "Timetable" },
   { href: "/school/absences", label: "Absences" },

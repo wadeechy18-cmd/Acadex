@@ -142,13 +142,34 @@ as "বাংলা (English)"), cached on the version (`translation_bn`) so
 switching the language toggle back and forth never re-triggers an AI call.
 The English original is never mutated.
 
+**Curriculum library** (`/teacher/lesson-plans/library`, `scripts/seed_lesson_plan_library.py`):
+every EYFS/KS1 weekly lesson bundled in `app/curriculum_packs/` is mapped
+once into a real, ready-made `LessonPlan` — no AI call — owned by a single
+dedicated, `is_active=False` account (`LIBRARY_OWNER_EMAIL`) that can never
+log in and exists purely to hold shared content. Any teacher can browse and
+filter these; "using" one calls the existing `duplicate_plan` service
+function to copy it into that teacher's own plans, fully editable from
+there — the shared original is never modified in place.
+
 ## Timetable & absence/cover automation
 
 The timetable is a grid of `TimetableEntry` rows (teacher × subject × class ×
-room, per `TimeSlot`) built by a school admin, with hard conflict checks in
-`app/services/timetable_service.py` (never double-book a teacher, class, or
-room in the same slot — enforced as an application-level check with a clear
-409, not a DB constraint, since class/room are optional).
+room, per `TimeSlot`), buildable by hand or **auto-generated**: an admin adds
+`ClassSubjectRequirement` rows (a class needs N periods/week of a subject),
+then `POST .../generate` hands them, the school's `TeacherSubjectQualification`
+and `TeacherAvailability` rows, and the timetable's `TimeSlot`s to
+`app/planning/timetable_generation.py` — another pure CP-SAT module (never
+AI, same as substitution below). It maximises total periods scheduled subject
+to hard constraints (never double-book a class/teacher in a slot; at most one
+period of the same requirement per day, so a subject spreads across the week
+rather than clustering); a requirement that can't be fully met is reported as
+a shortfall (requested vs. scheduled), never silently dropped or faked. Room
+assignment is a simple first-fit greedy pass afterward, deliberately outside
+the CP-SAT model (see that module's docstring) — a lesson with no room free
+is still scheduled, just without one. Generating replaces every entry on that
+timetable. Manual entry CRUD (with the same conflict checks, enforced at the
+application level with a clear 409, not a DB constraint, since class/room
+are optional) still works for hand-adjusting afterward.
 
 Reporting a `TeacherAbsence` deterministically computes every affected
 `TimetableEntry` for that date (`app/services/absence_service.py`) — no AI —
@@ -203,9 +224,10 @@ lesson plan yet, so this is a heuristic, and the UI says so.
   separately — `Timetable` scopes directly to `AcademicYear`.
 - Resource text extraction doesn't cover images yet (stored and
   downloadable, not OCR'd).
-- A handful of sidebar links (`/teacher/calendar`, `/teacher/settings`,
-  `/school/subjects`) remain unbuilt placeholders from early increments;
-  they were not part of any approved increment's scope.
+- The `/teacher/calendar` and `/teacher/settings` sidebar links from early
+  increments, and the school-side `/school/subjects`/`/school/resources`
+  links, were never built and have been removed rather than left as dead
+  links; they were not part of any approved increment's scope.
 - The substitute's "Cover Lesson" lesson-plan match is a best-effort
   heuristic (same owner, subject, and class), not a formal schedule link.
 - Student accounts, an AI tutor, adaptive learning, a marketplace, live
@@ -221,6 +243,7 @@ pip install -r requirements.txt -r requirements-dev.txt
 alembic upgrade head
 python -m scripts.seed_curriculum   # England / English National Curriculum browse data
 python -m scripts.seed_dev_data     # optional: a demo school/admin/teachers/timetable/task
+python -m scripts.seed_lesson_plan_library   # optional: ~1,800 ready-made EYFS/KS1 lesson plans
 uvicorn app.main:app --reload
 pytest
 

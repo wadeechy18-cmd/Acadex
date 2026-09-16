@@ -1,7 +1,7 @@
 import uuid
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
@@ -145,6 +145,35 @@ def list_plans(
         db, user, subject_id=subject_id, year_group_id=year_group_id, topic=topic, date_from=date_from, date_to=date_to, class_id=class_id
     )
     return [_summary_response(db, p) for p in plans]
+
+
+@router.get("/library", response_model=list[LessonPlanSummaryResponse])
+def list_library_plans(
+    subject_id: uuid.UUID | None = None,
+    year_group_id: uuid.UUID | None = None,
+    topic: str | None = None,
+    limit: int = Query(default=50, ge=1, le=200),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> list[LessonPlanSummaryResponse]:
+    """Pre-authored EYFS/KS1 lesson plans every teacher can browse -- see
+    scripts/seed_lesson_plan_library.py. Never editable in place; a teacher
+    copies one into their own plans via the duplicate endpoint below.
+    """
+    plans = lesson_plan_service.list_library_plans(db, subject_id=subject_id, year_group_id=year_group_id, topic=topic, limit=limit)
+    return [_summary_response(db, p) for p in plans]
+
+
+@router.get("/library/{plan_id}", response_model=LessonPlanResponse)
+def get_library_plan(plan_id: uuid.UUID, db: Session = Depends(get_db), user: User = Depends(get_current_user)) -> LessonPlanResponse:
+    plan = lesson_plan_service.get_library_plan(db, plan_id)
+    return _plan_response(db, plan)
+
+
+@router.post("/library/{plan_id}/duplicate", response_model=LessonPlanResponse, status_code=status.HTTP_201_CREATED)
+def duplicate_library_plan(plan_id: uuid.UUID, db: Session = Depends(get_db), user: User = Depends(get_current_user)) -> LessonPlanResponse:
+    new_plan = lesson_plan_service.duplicate_library_plan(db, user, plan_id)
+    return _plan_response(db, new_plan)
 
 
 @router.patch("/{plan_id}/assign", response_model=LessonPlanResponse)

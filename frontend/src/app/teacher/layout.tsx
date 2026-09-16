@@ -10,13 +10,12 @@ const NAV_ITEMS = [
   { href: "/teacher/dashboard", label: "Dashboard" },
   { href: "/teacher/lesson-planner", label: "Lesson Planner" },
   { href: "/teacher/lesson-plans", label: "My Lesson Plans" },
+  { href: "/teacher/lesson-plans/library", label: "Curriculum Library" },
   { href: "/teacher/resources", label: "Resources" },
   { href: "/teacher/classes", label: "Classes" },
   { href: "/teacher/tasks", label: "Tasks" },
   { href: "/teacher/cover", label: "Cover" },
   { href: "/teacher/notifications", label: "Notifications" },
-  { href: "/teacher/calendar", label: "Calendar" },
-  { href: "/teacher/settings", label: "Settings" },
 ];
 
 export default function TeacherLayout({ children }: { children: React.ReactNode }) {

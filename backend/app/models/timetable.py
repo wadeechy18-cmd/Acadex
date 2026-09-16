@@ -90,6 +90,22 @@ class TimetableEntry(UUIDPKMixin, TimestampMixin, Base):
     room_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("rooms.id", ondelete="SET NULL"), nullable=True)
 
 
+class ClassSubjectRequirement(UUIDPKMixin, TimestampMixin, Base):
+    """How many periods per week a class needs of a subject on a given
+    timetable -- what an admin fills in instead of manually placing every
+    lesson; app/planning/timetable_generation.py's CP-SAT solver then fills
+    the grid to satisfy as many of these as it can.
+    """
+
+    __tablename__ = "class_subject_requirements"
+    __table_args__ = (UniqueConstraint("timetable_id", "class_id", "subject_id", name="uq_class_subject_requirement"),)
+
+    timetable_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("timetables.id", ondelete="CASCADE"), nullable=False, index=True)
+    class_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("classes.id", ondelete="CASCADE"), nullable=False)
+    subject_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("subjects.id", ondelete="CASCADE"), nullable=False)
+    periods_per_week: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
 class TeacherSubjectQualification(UUIDPKMixin, TimestampMixin, Base):
     """Which subjects a teacher is qualified to teach within this school --
     critical for both building the normal timetable and, later, for
