@@ -6,7 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiFetch, ApiError, downloadFile } from "@/lib/api-client";
-import type { HomeworkContent, LessonPlan, LessonPlanContent, LessonPlanVersion, Resource, TimelineEntry, WorksheetContent } from "@/types";
+import type {
+  HomeworkContent,
+  LessonPlan,
+  LessonPlanContent,
+  LessonPlanVersion,
+  Resource,
+  TeacherScriptSection as TeacherScriptSectionType,
+  TimelineEntry,
+  WorksheetContent,
+} from "@/types";
 
 const WORKSHEET_QUESTION_SECTIONS: { key: keyof WorksheetContent; label: string }[] = [
   { key: "recall_questions", label: "Recall questions" },
@@ -40,6 +49,17 @@ const TEXT_SECTIONS: { key: keyof LessonPlanContent; label: string }[] = [
   { key: "cross_curricular_links", label: "Cross-curricular links" },
 ];
 
+type DisplayLanguage = "en" | "bn" | "both";
+
+function findTimelineMatch(timeline: TimelineEntry[], keywords: string[]): TimelineEntry | undefined {
+  return timeline.find((entry) => keywords.some((k) => entry.activity.toLowerCase().includes(k)));
+}
+
+function timeLabel(entry: TimelineEntry | undefined): string | null {
+  if (!entry) return null;
+  return `${entry.start_minute}-${entry.end_minute} min`;
+}
+
 export default function LessonPlanEditorPage() {
   const params = useParams();
   const planId = params.id as string;
@@ -56,8 +76,9 @@ export default function LessonPlanEditorPage() {
   const [saving, setSaving] = useState(false);
   const [regeneratingSection, setRegeneratingSection] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [language, setLanguage] = useState<"en" | "bn">("en");
+  const [displayLanguage, setDisplayLanguage] = useState<DisplayLanguage>("en");
   const [translating, setTranslating] = useState(false);
+  const [mode, setMode] = useState<"view" | "edit">("view");
 
   function loadAll() {
     setLoading(true);
@@ -95,7 +116,7 @@ export default function LessonPlanEditorPage() {
     setContent(version.content);
     setWorksheet(version.worksheet);
     setHomeworkTask(version.homework_task);
-    setLanguage("en");
+    setDisplayLanguage("en");
   }
 
   function updateField<K extends keyof LessonPlanContent>(key: K, value: LessonPlanContent[K]) {
@@ -271,12 +292,12 @@ export default function LessonPlanEditorPage() {
     }
   }
 
-  async function handleToggleLanguage(target: "en" | "bn") {
+  async function handleSetLanguage(target: DisplayLanguage) {
     if (target === "en" || !displayedVersion) {
-      setLanguage(target);
+      setDisplayLanguage(target);
       return;
     }
-    setLanguage("bn");
+    setDisplayLanguage(target);
     if (displayedVersion.translation_bn) return;
     setTranslating(true);
     setError(null);
@@ -285,7 +306,7 @@ export default function LessonPlanEditorPage() {
       loadAll();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Couldn't translate this lesson.");
-      setLanguage("en");
+      setDisplayLanguage("en");
     } finally {
       setTranslating(false);
     }
@@ -323,52 +344,134 @@ export default function LessonPlanEditorPage() {
   if (!plan || !content) return null;
 
   const readOnly = isViewingOldVersion;
+  const translatedLesson = displayedVersion?.translation_bn?.lesson ?? null;
+  const translatedWorksheet = displayedVersion?.translation_bn?.worksheet ?? null;
+  const translatedHomework = displayedVersion?.translation_bn?.homework ?? null;
+  const showEnglish = displayLanguage !== "bn";
+  const showBangla = displayLanguage !== "en";
+
+  function ScriptBlock({
+    label,
+    script,
+    fallbackText,
+    bnScript,
+  }: {
+    label: string;
+    script: TeacherScriptSectionType | null | undefined;
+    fallbackText: string;
+    bnScript?: TeacherScriptSectionType | null;
+  }) {
+    if (!script) {
+      // Older/imported plans without a script breakdown -- fall back to the
+      // plain summary text rather than showing an empty section.
+      return (
+        <div>
+          <p className="text-sm font-semibold text-muted-foreground">{label}</p>
+          {showEnglish && <p className="mt-1">{fallbackText || "-"}</p>}
+          {showBangla && bnScript == null && translatedLesson && <p className="mt-1 text-muted-foreground">{"-"}</p>}
+        </div>
+      );
+    }
+    return (
+      <div className="flex flex-col gap-2">
+        <p className="text-sm font-semibold text-muted-foreground">{label}</p>
+        {script.teacher_says && (
+          <div>
+            <span className="font-semibold">TEACHER SAYS: </span>
+            {showEnglish && <span>&ldquo;{script.teacher_says}&rdquo;</span>}
+            {showBangla && bnScript?.teacher_says && (
+              <p className={showEnglish ? "mt-1 text-muted-foreground" : ""}>বাংলা: &ldquo;{bnScript.teacher_says}&rdquo;</p>
+            )}
+          </div>
+        )}
+        {script.do && (
+          <div>
+            <span className="font-semibold">DO: </span>
+            {showEnglish && <span>{script.do}</span>}
+            {showBangla && bnScript?.do && <p className={showEnglish ? "mt-1 text-muted-foreground" : ""}>বাংলা: {bnScript.do}</p>}
+          </div>
+        )}
+        {script.ask.length > 0 && (
+          <div>
+            <span className="font-semibold">ASK: </span>
+            <ul className="mt-1 list-disc pl-5">
+              {script.ask.map((q, i) => (
+                <li key={i}>
+                  {showEnglish && <span>{q}</span>}
+                  {showBangla && bnScript?.ask[i] && <p className={showEnglish ? "text-muted-foreground" : ""}>বাংলা: {bnScript.ask[i]}</p>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {script.expected_answers.length > 0 && (
+          <div>
+            <span className="font-semibold">EXPECTED ANSWER: </span>
+            <ul className="mt-1 list-disc pl-5 text-muted-foreground">
+              {script.expected_answers.map((a, i) => (
+                <li key={i}>{a}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {script.students_do && (
+          <div>
+            <span className="font-semibold">STUDENTS DO: </span>
+            <span>{script.students_do}</span>
+          </div>
+        )}
+        {script.check_understanding && (
+          <div>
+            <span className="font-semibold">CHECK FOR UNDERSTANDING: </span>
+            <span>{script.check_understanding}</span>
+          </div>
+        )}
+        {script.watch_out_for && (
+          <div className="rounded-md bg-amber-50 p-2 text-amber-900">
+            <span className="font-semibold">WATCH OUT FOR: </span>
+            <span>{script.watch_out_for}</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  const starterTime = timeLabel(findTimelineMatch(content.timeline, ["starter"]));
+  const mainTime = timeLabel(findTimelineMatch(content.timeline, ["main", "explanation", "teach"]));
+  const guidedTime = timeLabel(findTimelineMatch(content.timeline, ["guided"]));
+  const independentTime = timeLabel(findTimelineMatch(content.timeline, ["independent"]));
+  const plenaryTime = timeLabel(findTimelineMatch(content.timeline, ["plenary"]));
 
   return (
     <main className="mx-auto flex max-w-5xl gap-8 p-8 print:block">
       <div className="flex-1">
         <div className="flex items-center justify-between gap-4">
-          <Input
-            className="text-xl font-bold"
-            value={content.title}
-            onChange={(e) => updateField("title", e.target.value)}
-            disabled={readOnly}
-          />
+          {mode === "edit" ? (
+            <Input className="text-xl font-bold" value={content.title} onChange={(e) => updateField("title", e.target.value)} disabled={readOnly} />
+          ) : (
+            <h1 className="text-xl font-bold">{content.title}</h1>
+          )}
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
           {plan.subject_name} · {plan.year_group_name} · {plan.duration_minutes} min · {plan.ability_level}
           {plan.scheduled_date && ` · ${new Date(plan.scheduled_date).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}`}
         </p>
 
-        <div className="mt-3 flex gap-2 print:hidden">
-          <Button size="sm" variant={language === "en" ? "default" : "outline"} onClick={() => handleToggleLanguage("en")}>
-            English
+        <div className="mt-3 flex flex-wrap gap-2 print:hidden">
+          <Button size="sm" variant={displayLanguage === "en" ? "default" : "outline"} onClick={() => handleSetLanguage("en")}>
+            Show English
           </Button>
-          <Button size="sm" variant={language === "bn" ? "default" : "outline"} disabled={translating} onClick={() => handleToggleLanguage("bn")}>
-            {translating ? "Translating…" : "Translate to বাংলা"}
+          <Button size="sm" variant={displayLanguage === "bn" ? "default" : "outline"} disabled={translating} onClick={() => handleSetLanguage("bn")}>
+            {translating && displayLanguage === "bn" ? "Translating…" : "Translate to বাংলা"}
+          </Button>
+          <Button size="sm" variant={displayLanguage === "both" ? "default" : "outline"} disabled={translating} onClick={() => handleSetLanguage("both")}>
+            Show Both
           </Button>
         </div>
 
-        {displayedVersion?.safeguarding_flagged && (
-          <div className="mt-4 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-            {displayedVersion.safeguarding_notes}
-          </div>
-        )}
-        {readOnly && (
-          <div className="mt-4 rounded-md border bg-muted/40 p-3 text-sm">
-            Viewing version {displayedVersion?.version_number} (read-only).{" "}
-            <button className="underline" onClick={() => selectVersion(currentVersion!.id)}>
-              Back to current
-            </button>
-          </div>
-        )}
-
         <div className="mt-4 flex flex-wrap gap-2 print:hidden">
-          <Button onClick={handleSave} disabled={saving || readOnly}>
-            Save
-          </Button>
-          <Button variant="outline" onClick={handleSaveAsNewVersion} disabled={saving || readOnly}>
-            Save as new version
+          <Button variant={mode === "edit" ? "default" : "outline"} onClick={() => setMode(mode === "edit" ? "view" : "edit")} disabled={readOnly}>
+            {mode === "edit" ? "Done editing" : "Edit"}
           </Button>
           <Button variant="outline" onClick={() => downloadFile(`/lesson-plans/${planId}/versions/${displayedVersion!.id}/export.pdf`)}>
             Export PDF
@@ -379,61 +482,377 @@ export default function LessonPlanEditorPage() {
           <Button variant="outline" onClick={() => window.print()}>
             Print
           </Button>
+          {mode === "edit" && (
+            <>
+              <Button onClick={handleSave} disabled={saving || readOnly}>
+                Save
+              </Button>
+              <Button variant="outline" onClick={handleSaveAsNewVersion} disabled={saving || readOnly}>
+                Save as new version
+              </Button>
+            </>
+          )}
         </div>
+
+        {readOnly && (
+          <div className="mt-4 rounded-md border bg-muted/40 p-3 text-sm">
+            Viewing version {displayedVersion?.version_number} (read-only).{" "}
+            <button className="underline" onClick={() => selectVersion(currentVersion!.id)}>
+              Back to current
+            </button>
+          </div>
+        )}
         {message && <p className="mt-2 text-sm text-muted-foreground">{message}</p>}
         {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
 
-        <div className="mt-8 flex flex-col gap-8">
-          {TEXT_SECTIONS.map(({ key, label }) => (
-            <section key={key}>
+        {displayedVersion && displayedVersion.resource_ids.length === 0 && (
+          <div className="mt-4 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+            Your resource library didn&apos;t have enough matching material for this lesson. Additional content was
+            generated from curriculum information instead.
+          </div>
+        )}
+
+        {mode === "view" ? (
+          <div className="mt-8 flex flex-col gap-8">
+            <section>
+              <h2 className="text-lg font-semibold">Learning Objective</h2>
+              <ul className="mt-1 list-disc pl-5">
+                {content.learning_objectives.map((o, i) => (
+                  <li key={i}>{o}</li>
+                ))}
+              </ul>
+              {showBangla && translatedLesson && (
+                <ul className="mt-1 list-disc pl-5 text-muted-foreground">
+                  {translatedLesson.learning_objectives.map((o, i) => (
+                    <li key={i}>বাংলা: {o}</li>
+                  ))}
+                </ul>
+              )}
+
+              <h2 className="mt-4 text-lg font-semibold">Success Criteria</h2>
+              <ul className="mt-1 list-disc pl-5">
+                {content.success_criteria.map((s, i) => (
+                  <li key={i}>{s}</li>
+                ))}
+              </ul>
+
+              <h2 className="mt-4 text-lg font-semibold">Prior Knowledge</h2>
+              <p className="mt-1">{content.prior_knowledge || "-"}</p>
+
+              {displayedVersion && displayedVersion.resource_ids.length > 0 && (
+                <>
+                  <h2 className="mt-4 text-lg font-semibold">Resources Used</h2>
+                  <ul className="mt-1 list-disc pl-5">
+                    {displayedVersion.resource_ids.map((id) => (
+                      <li key={id}>✓ {resources.find((r) => r.id === id)?.display_name ?? "Untitled resource"}</li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </section>
+
+            <section>
+              <h2 className="text-xl font-bold">Lesson Structure</h2>
+
+              <div className="mt-4 rounded-lg border p-4">
+                <div className="flex items-baseline justify-between">
+                  <h3 className="font-semibold">1. Starter</h3>
+                  {starterTime && <span className="text-xs text-muted-foreground">{starterTime}</span>}
+                </div>
+                <div className="mt-2">
+                  <ScriptBlock label="" script={content.starter_script} fallbackText={content.starter} bnScript={translatedLesson?.starter_script} />
+                </div>
+              </div>
+
+              <div className="mt-4 rounded-lg border p-4">
+                <div className="flex items-baseline justify-between">
+                  <h3 className="font-semibold">2. Main Teaching / Explanation</h3>
+                  {mainTime && <span className="text-xs text-muted-foreground">{mainTime}</span>}
+                </div>
+                <div className="mt-2">
+                  <ScriptBlock
+                    label=""
+                    script={content.teacher_explanation_script}
+                    fallbackText={content.teacher_explanation}
+                    bnScript={translatedLesson?.teacher_explanation_script}
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4 rounded-lg border p-4">
+                <div className="flex items-baseline justify-between">
+                  <h3 className="font-semibold">3. Guided Practice</h3>
+                  {guidedTime && <span className="text-xs text-muted-foreground">{guidedTime}</span>}
+                </div>
+                <div className="mt-2">
+                  <ScriptBlock
+                    label=""
+                    script={content.guided_practice_script}
+                    fallbackText={content.guided_practice}
+                    bnScript={translatedLesson?.guided_practice_script}
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4 rounded-lg border p-4">
+                <div className="flex items-baseline justify-between">
+                  <h3 className="font-semibold">4. Independent Activity</h3>
+                  {independentTime && <span className="text-xs text-muted-foreground">{independentTime}</span>}
+                </div>
+                <p className="mt-2">{content.independent_practice}</p>
+                {showBangla && translatedLesson && <p className="mt-1 text-muted-foreground">বাংলা: {translatedLesson.independent_practice}</p>}
+                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground">Support</p>
+                    <p className="text-sm">{content.differentiation.support}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground">Core</p>
+                    <p className="text-sm">{content.differentiation.core}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground">Challenge</p>
+                    <p className="text-sm">{content.differentiation.greater_depth}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 rounded-lg border p-4">
+                <div className="flex items-baseline justify-between">
+                  <h3 className="font-semibold">5. Plenary</h3>
+                  {plenaryTime && <span className="text-xs text-muted-foreground">{plenaryTime}</span>}
+                </div>
+                <div className="mt-2">
+                  <ScriptBlock label="" script={content.plenary_script} fallbackText={content.plenary} bnScript={translatedLesson?.plenary_script} />
+                </div>
+              </div>
+            </section>
+
+            {homeworkTask && (
+              <section className="rounded-lg border p-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold">6. Homework / Follow-up</h2>
+                  <div className="flex gap-2 print:hidden">
+                    <Button variant="outline" size="sm" onClick={() => downloadFile(`/lesson-plans/${planId}/versions/${displayedVersion!.id}/homework/export.pdf`)}>
+                      Export PDF
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => downloadFile(`/lesson-plans/${planId}/versions/${displayedVersion!.id}/homework/export.docx`)}>
+                      Export DOCX
+                    </Button>
+                  </div>
+                </div>
+                <p className="mt-2 font-medium">{homeworkTask.title}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{homeworkTask.instructions}</p>
+                <p className="mt-1 text-xs text-muted-foreground">Estimated time: {homeworkTask.estimated_minutes} minutes</p>
+                <ul className="mt-2 list-disc pl-5">
+                  {homeworkTask.tasks.map((t, i) => (
+                    <li key={i}>{t}</li>
+                  ))}
+                </ul>
+                {showBangla && translatedHomework && (
+                  <div className="mt-3 border-t pt-3 text-muted-foreground">
+                    <p className="font-medium">বাংলা: {translatedHomework.title}</p>
+                    <p className="mt-1 text-sm">{translatedHomework.instructions}</p>
+                    <ul className="mt-2 list-disc pl-5">
+                      {translatedHomework.tasks.map((t, i) => (
+                        <li key={i}>{t}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </section>
+            )}
+
+            {worksheet && (
+              <section className="rounded-lg border p-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold">Worksheet</h2>
+                  <div className="flex gap-2 print:hidden">
+                    <Button variant="outline" size="sm" onClick={() => downloadFile(`/lesson-plans/${planId}/versions/${displayedVersion!.id}/worksheet/export.pdf`)}>
+                      Export PDF
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => downloadFile(`/lesson-plans/${planId}/versions/${displayedVersion!.id}/worksheet/export.docx`)}>
+                      Export DOCX
+                    </Button>
+                  </div>
+                </div>
+                <p className="mt-2 font-medium">{worksheet.title}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{worksheet.instructions}</p>
+                {WORKSHEET_QUESTION_SECTIONS.map(({ key, label }) =>
+                  (worksheet[key] as string[]).length > 0 ? (
+                    <div key={key} className="mt-3">
+                      <p className="text-sm font-semibold text-muted-foreground">{label}</p>
+                      <ul className="mt-1 list-disc pl-5">
+                        {(worksheet[key] as string[]).map((q, i) => (
+                          <li key={i}>{q}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null
+                )}
+              </section>
+            )}
+
+            <section className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+              <h2 className="text-lg font-semibold text-destructive">Safeguarding &amp; Safety</h2>
+              {displayedVersion?.safeguarding_flagged ? (
+                <p className="mt-2 text-sm text-destructive">⚠ {displayedVersion.safeguarding_notes}</p>
+              ) : (
+                <p className="mt-2 text-sm text-muted-foreground">No automated safety concerns were flagged for this lesson.</p>
+              )}
+              <p className="mt-2 text-xs text-muted-foreground">
+                This automated check does not guarantee the lesson is safe. You and your school remain responsible for
+                following your own safeguarding policies, risk assessments and professional procedures.
+              </p>
+            </section>
+          </div>
+        ) : (
+          <div className="mt-8 flex flex-col gap-8">
+            {TEXT_SECTIONS.map(({ key, label }) => (
+              <section key={key}>
+                <div className="flex items-center justify-between">
+                  <Label>{label}</Label>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="print:hidden"
+                    disabled={readOnly || regeneratingSection === key}
+                    onClick={() => handleRegenerate(key)}
+                  >
+                    {regeneratingSection === key ? "Regenerating…" : "Regenerate"}
+                  </Button>
+                </div>
+                <textarea
+                  className={`${textAreaClass} mt-2 h-24`}
+                  value={content[key] as string}
+                  onChange={(e) => updateField(key, e.target.value as never)}
+                  disabled={readOnly}
+                />
+              </section>
+            ))}
+
+            {LIST_SECTIONS.map(({ key, label }) => (
+              <section key={key}>
+                <div className="flex items-center justify-between">
+                  <Label>{label}</Label>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="print:hidden"
+                    disabled={readOnly || regeneratingSection === key}
+                    onClick={() => handleRegenerate(key)}
+                  >
+                    {regeneratingSection === key ? "Regenerating…" : "Regenerate"}
+                  </Button>
+                </div>
+                <div className="mt-2 flex flex-col gap-2">
+                  {(content[key] as string[]).map((item, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <Input value={item} onChange={(e) => updateListItem(key, i, e.target.value)} disabled={readOnly} />
+                      {!readOnly && (
+                        <div className="flex shrink-0 gap-1 print:hidden">
+                          <Button variant="outline" size="sm" onClick={() => moveListItem(key, i, -1)}>
+                            ↑
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => moveListItem(key, i, 1)}>
+                            ↓
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => removeListItem(key, i)}>
+                            Remove
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {!readOnly && (
+                    <Button variant="outline" size="sm" className="self-start print:hidden" onClick={() => addListItem(key)}>
+                      Add item
+                    </Button>
+                  )}
+                </div>
+              </section>
+            ))}
+
+            <section>
               <div className="flex items-center justify-between">
-                <Label>{label}</Label>
+                <Label>Differentiation</Label>
                 <Button
                   variant="outline"
                   size="sm"
                   className="print:hidden"
-                  disabled={readOnly || regeneratingSection === key}
-                  onClick={() => handleRegenerate(key)}
+                  disabled={readOnly || regeneratingSection === "differentiation"}
+                  onClick={() => handleRegenerate("differentiation")}
                 >
-                  {regeneratingSection === key ? "Regenerating…" : "Regenerate"}
+                  {regeneratingSection === "differentiation" ? "Regenerating…" : "Regenerate"}
                 </Button>
               </div>
-              <textarea
-                className={`${textAreaClass} mt-2 h-24`}
-                value={content[key] as string}
-                onChange={(e) => updateField(key, e.target.value as never)}
-                disabled={readOnly}
-              />
+              {(["support", "core", "greater_depth"] as const).map((tier) => (
+                <div key={tier} className="mt-2">
+                  <Label className="text-xs capitalize text-muted-foreground">{tier.replace("_", " ")}</Label>
+                  <textarea
+                    className={`${textAreaClass} h-16`}
+                    value={content.differentiation[tier]}
+                    onChange={(e) => updateField("differentiation", { ...content.differentiation, [tier]: e.target.value })}
+                    disabled={readOnly}
+                  />
+                </div>
+              ))}
             </section>
-          ))}
 
-          {LIST_SECTIONS.map(({ key, label }) => (
-            <section key={key}>
+            <section>
               <div className="flex items-center justify-between">
-                <Label>{label}</Label>
+                <Label>Timeline</Label>
                 <Button
                   variant="outline"
                   size="sm"
                   className="print:hidden"
-                  disabled={readOnly || regeneratingSection === key}
-                  onClick={() => handleRegenerate(key)}
+                  disabled={readOnly || regeneratingSection === "timeline"}
+                  onClick={() => handleRegenerate("timeline")}
                 >
-                  {regeneratingSection === key ? "Regenerating…" : "Regenerate"}
+                  {regeneratingSection === "timeline" ? "Regenerating…" : "Regenerate"}
                 </Button>
               </div>
               <div className="mt-2 flex flex-col gap-2">
-                {(content[key] as string[]).map((item, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <Input value={item} onChange={(e) => updateListItem(key, i, e.target.value)} disabled={readOnly} />
+                {content.timeline.map((entry, i) => (
+                  <div key={i} className="rounded-md border p-3">
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        className="w-20"
+                        value={entry.start_minute}
+                        onChange={(e) => updateTimelineEntry(i, { start_minute: Number(e.target.value) })}
+                        disabled={readOnly}
+                      />
+                      <Input
+                        type="number"
+                        className="w-20"
+                        value={entry.end_minute}
+                        onChange={(e) => updateTimelineEntry(i, { end_minute: Number(e.target.value) })}
+                        disabled={readOnly}
+                      />
+                      <Input
+                        placeholder="Activity"
+                        value={entry.activity}
+                        onChange={(e) => updateTimelineEntry(i, { activity: e.target.value })}
+                        disabled={readOnly}
+                      />
+                    </div>
+                    <textarea
+                      className={`${textAreaClass} mt-2 h-16`}
+                      placeholder="Description"
+                      value={entry.description}
+                      onChange={(e) => updateTimelineEntry(i, { description: e.target.value })}
+                      disabled={readOnly}
+                    />
                     {!readOnly && (
-                      <div className="flex shrink-0 gap-1 print:hidden">
-                        <Button variant="outline" size="sm" onClick={() => moveListItem(key, i, -1)}>
+                      <div className="mt-2 flex gap-1 print:hidden">
+                        <Button variant="outline" size="sm" onClick={() => moveTimelineEntry(i, -1)}>
                           ↑
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => moveListItem(key, i, 1)}>
+                        <Button variant="outline" size="sm" onClick={() => moveTimelineEntry(i, 1)}>
                           ↓
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => removeListItem(key, i)}>
+                        <Button variant="outline" size="sm" onClick={() => removeTimelineEntry(i)}>
                           Remove
                         </Button>
                       </div>
@@ -441,280 +860,115 @@ export default function LessonPlanEditorPage() {
                   </div>
                 ))}
                 {!readOnly && (
-                  <Button variant="outline" size="sm" className="self-start print:hidden" onClick={() => addListItem(key)}>
-                    Add item
+                  <Button variant="outline" size="sm" className="self-start print:hidden" onClick={addTimelineEntry}>
+                    Add step
                   </Button>
                 )}
               </div>
             </section>
-          ))}
 
-          <section>
-            <div className="flex items-center justify-between">
-              <Label>Differentiation</Label>
-              <Button
-                variant="outline"
-                size="sm"
-                className="print:hidden"
-                disabled={readOnly || regeneratingSection === "differentiation"}
-                onClick={() => handleRegenerate("differentiation")}
-              >
-                {regeneratingSection === "differentiation" ? "Regenerating…" : "Regenerate"}
-              </Button>
-            </div>
-            {(["support", "core", "greater_depth"] as const).map((tier) => (
-              <div key={tier} className="mt-2">
-                <Label className="text-xs capitalize text-muted-foreground">{tier.replace("_", " ")}</Label>
+            {worksheet && (
+              <section className="rounded-lg border p-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold">Worksheet</h2>
+                  <div className="flex gap-2 print:hidden">
+                    <Button variant="outline" size="sm" disabled={readOnly || regeneratingSection === "worksheet"} onClick={handleRegenerateWorksheet}>
+                      {regeneratingSection === "worksheet" ? "Regenerating…" : "Regenerate"}
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => downloadFile(`/lesson-plans/${planId}/versions/${displayedVersion!.id}/worksheet/export.pdf`)}>
+                      Export PDF
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => downloadFile(`/lesson-plans/${planId}/versions/${displayedVersion!.id}/worksheet/export.docx`)}>
+                      Export DOCX
+                    </Button>
+                  </div>
+                </div>
+                <Input className="mt-3 font-medium" value={worksheet.title} onChange={(e) => updateWorksheetField("title", e.target.value)} disabled={readOnly} />
                 <textarea
-                  className={`${textAreaClass} h-16`}
-                  value={content.differentiation[tier]}
-                  onChange={(e) => updateField("differentiation", { ...content.differentiation, [tier]: e.target.value })}
+                  className={`${textAreaClass} mt-2 h-16`}
+                  value={worksheet.instructions}
+                  onChange={(e) => updateWorksheetField("instructions", e.target.value)}
                   disabled={readOnly}
                 />
-              </div>
-            ))}
-          </section>
-
-          <section>
-            <div className="flex items-center justify-between">
-              <Label>Timeline</Label>
-              <Button
-                variant="outline"
-                size="sm"
-                className="print:hidden"
-                disabled={readOnly || regeneratingSection === "timeline"}
-                onClick={() => handleRegenerate("timeline")}
-              >
-                {regeneratingSection === "timeline" ? "Regenerating…" : "Regenerate"}
-              </Button>
-            </div>
-            <div className="mt-2 flex flex-col gap-2">
-              {content.timeline.map((entry, i) => (
-                <div key={i} className="rounded-md border p-3">
-                  <div className="flex gap-2">
-                    <Input
-                      type="number"
-                      className="w-20"
-                      value={entry.start_minute}
-                      onChange={(e) => updateTimelineEntry(i, { start_minute: Number(e.target.value) })}
-                      disabled={readOnly}
-                    />
-                    <Input
-                      type="number"
-                      className="w-20"
-                      value={entry.end_minute}
-                      onChange={(e) => updateTimelineEntry(i, { end_minute: Number(e.target.value) })}
-                      disabled={readOnly}
-                    />
-                    <Input
-                      placeholder="Activity"
-                      value={entry.activity}
-                      onChange={(e) => updateTimelineEntry(i, { activity: e.target.value })}
-                      disabled={readOnly}
-                    />
+                {WORKSHEET_QUESTION_SECTIONS.map(({ key, label }) => (
+                  <div key={key} className="mt-4">
+                    <Label>{label}</Label>
+                    <div className="mt-2 flex flex-col gap-2">
+                      {(worksheet[key] as string[]).map((q, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <Input value={q} onChange={(e) => updateWorksheetQuestion(key, i, e.target.value)} disabled={readOnly} />
+                          {!readOnly && (
+                            <Button variant="outline" size="sm" className="print:hidden" onClick={() => removeWorksheetQuestion(key, i)}>
+                              Remove
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                      {!readOnly && (
+                        <Button variant="outline" size="sm" className="self-start print:hidden" onClick={() => addWorksheetQuestion(key)}>
+                          Add question
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                  <textarea
-                    className={`${textAreaClass} mt-2 h-16`}
-                    placeholder="Description"
-                    value={entry.description}
-                    onChange={(e) => updateTimelineEntry(i, { description: e.target.value })}
+                ))}
+              </section>
+            )}
+
+            {homeworkTask && (
+              <section className="rounded-lg border p-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold">Homework</h2>
+                  <div className="flex gap-2 print:hidden">
+                    <Button variant="outline" size="sm" disabled={readOnly || regeneratingSection === "homework"} onClick={handleRegenerateHomework}>
+                      {regeneratingSection === "homework" ? "Regenerating…" : "Regenerate"}
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => downloadFile(`/lesson-plans/${planId}/versions/${displayedVersion!.id}/homework/export.pdf`)}>
+                      Export PDF
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => downloadFile(`/lesson-plans/${planId}/versions/${displayedVersion!.id}/homework/export.docx`)}>
+                      Export DOCX
+                    </Button>
+                  </div>
+                </div>
+                <Input className="mt-3 font-medium" value={homeworkTask.title} onChange={(e) => updateHomeworkField("title", e.target.value)} disabled={readOnly} />
+                <textarea
+                  className={`${textAreaClass} mt-2 h-16`}
+                  value={homeworkTask.instructions}
+                  onChange={(e) => updateHomeworkField("instructions", e.target.value)}
+                  disabled={readOnly}
+                />
+                <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+                  <Label>Estimated minutes</Label>
+                  <Input
+                    type="number"
+                    className="w-20"
+                    value={homeworkTask.estimated_minutes}
+                    onChange={(e) => updateHomeworkField("estimated_minutes", Number(e.target.value))}
                     disabled={readOnly}
                   />
+                </div>
+                <div className="mt-4 flex flex-col gap-2">
+                  {homeworkTask.tasks.map((task, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <Input value={task} onChange={(e) => updateHomeworkTaskItem(i, e.target.value)} disabled={readOnly} />
+                      {!readOnly && (
+                        <Button variant="outline" size="sm" className="print:hidden" onClick={() => removeHomeworkTask(i)}>
+                          Remove
+                        </Button>
+                      )}
+                    </div>
+                  ))}
                   {!readOnly && (
-                    <div className="mt-2 flex gap-1 print:hidden">
-                      <Button variant="outline" size="sm" onClick={() => moveTimelineEntry(i, -1)}>
-                        ↑
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => moveTimelineEntry(i, 1)}>
-                        ↓
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => removeTimelineEntry(i)}>
-                        Remove
-                      </Button>
-                    </div>
+                    <Button variant="outline" size="sm" className="self-start print:hidden" onClick={addHomeworkTask}>
+                      Add task
+                    </Button>
                   )}
                 </div>
-              ))}
-              {!readOnly && (
-                <Button variant="outline" size="sm" className="self-start print:hidden" onClick={addTimelineEntry}>
-                  Add step
-                </Button>
-              )}
-            </div>
-          </section>
-
-          {worksheet && (
-            <section className="rounded-lg border p-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold">Worksheet</h2>
-                <div className="flex gap-2 print:hidden">
-                  <Button variant="outline" size="sm" disabled={readOnly || regeneratingSection === "worksheet"} onClick={handleRegenerateWorksheet}>
-                    {regeneratingSection === "worksheet" ? "Regenerating…" : "Regenerate"}
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => downloadFile(`/lesson-plans/${planId}/versions/${displayedVersion!.id}/worksheet/export.pdf`)}>
-                    Export PDF
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => downloadFile(`/lesson-plans/${planId}/versions/${displayedVersion!.id}/worksheet/export.docx`)}>
-                    Export DOCX
-                  </Button>
-                </div>
-              </div>
-              <Input className="mt-3 font-medium" value={worksheet.title} onChange={(e) => updateWorksheetField("title", e.target.value)} disabled={readOnly} />
-              <textarea
-                className={`${textAreaClass} mt-2 h-16`}
-                value={worksheet.instructions}
-                onChange={(e) => updateWorksheetField("instructions", e.target.value)}
-                disabled={readOnly}
-              />
-              {WORKSHEET_QUESTION_SECTIONS.map(({ key, label }) => (
-                <div key={key} className="mt-4">
-                  <Label>{label}</Label>
-                  <div className="mt-2 flex flex-col gap-2">
-                    {(worksheet[key] as string[]).map((q, i) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <Input value={q} onChange={(e) => updateWorksheetQuestion(key, i, e.target.value)} disabled={readOnly} />
-                        {!readOnly && (
-                          <Button variant="outline" size="sm" className="print:hidden" onClick={() => removeWorksheetQuestion(key, i)}>
-                            Remove
-                          </Button>
-                        )}
-                      </div>
-                    ))}
-                    {!readOnly && (
-                      <Button variant="outline" size="sm" className="self-start print:hidden" onClick={() => addWorksheetQuestion(key)}>
-                        Add question
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </section>
-          )}
-
-          {homeworkTask && (
-            <section className="rounded-lg border p-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold">Homework</h2>
-                <div className="flex gap-2 print:hidden">
-                  <Button variant="outline" size="sm" disabled={readOnly || regeneratingSection === "homework"} onClick={handleRegenerateHomework}>
-                    {regeneratingSection === "homework" ? "Regenerating…" : "Regenerate"}
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => downloadFile(`/lesson-plans/${planId}/versions/${displayedVersion!.id}/homework/export.pdf`)}>
-                    Export PDF
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => downloadFile(`/lesson-plans/${planId}/versions/${displayedVersion!.id}/homework/export.docx`)}>
-                    Export DOCX
-                  </Button>
-                </div>
-              </div>
-              <Input className="mt-3 font-medium" value={homeworkTask.title} onChange={(e) => updateHomeworkField("title", e.target.value)} disabled={readOnly} />
-              <textarea
-                className={`${textAreaClass} mt-2 h-16`}
-                value={homeworkTask.instructions}
-                onChange={(e) => updateHomeworkField("instructions", e.target.value)}
-                disabled={readOnly}
-              />
-              <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
-                <Label>Estimated minutes</Label>
-                <Input
-                  type="number"
-                  className="w-20"
-                  value={homeworkTask.estimated_minutes}
-                  onChange={(e) => updateHomeworkField("estimated_minutes", Number(e.target.value))}
-                  disabled={readOnly}
-                />
-              </div>
-              <div className="mt-4 flex flex-col gap-2">
-                {homeworkTask.tasks.map((task, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <Input value={task} onChange={(e) => updateHomeworkTaskItem(i, e.target.value)} disabled={readOnly} />
-                    {!readOnly && (
-                      <Button variant="outline" size="sm" className="print:hidden" onClick={() => removeHomeworkTask(i)}>
-                        Remove
-                      </Button>
-                    )}
-                  </div>
-                ))}
-                {!readOnly && (
-                  <Button variant="outline" size="sm" className="self-start print:hidden" onClick={addHomeworkTask}>
-                    Add task
-                  </Button>
-                )}
-              </div>
-            </section>
-          )}
-
-          {displayedVersion && displayedVersion.resource_ids.length > 0 && (
-            <section className="rounded-lg border p-4 print:hidden">
-              <h2 className="text-lg font-semibold">Resources used</h2>
-              <p className="mt-1 text-sm text-muted-foreground">Automatically matched from your resource library for this lesson.</p>
-              <ul className="mt-2 list-disc pl-5 text-sm">
-                {displayedVersion.resource_ids.map((id) => (
-                  <li key={id}>{resources.find((r) => r.id === id)?.display_name ?? "Untitled resource"}</li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          {language === "bn" && (
-            <section className="rounded-lg border p-4">
-              <h2 className="text-lg font-semibold">বাংলা অনুবাদ (Bangla translation)</h2>
-              {translating && <p className="mt-2 text-sm text-muted-foreground">Translating…</p>}
-              {!translating && displayedVersion?.translation_bn && (
-                <div className="mt-2 flex flex-col gap-4 text-sm">
-                  <div>
-                    <p className="font-medium">{displayedVersion.translation_bn.lesson.title}</p>
-                    <p className="mt-1 text-muted-foreground">{displayedVersion.translation_bn.lesson.overview}</p>
-                  </div>
-                  <div>
-                    <Label>Learning objectives</Label>
-                    <ul className="mt-1 list-disc pl-5">
-                      {displayedVersion.translation_bn.lesson.learning_objectives.map((o, i) => (
-                        <li key={i}>{o}</li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div>
-                    <Label>Teacher explanation</Label>
-                    <p className="mt-1">{displayedVersion.translation_bn.lesson.teacher_explanation}</p>
-                  </div>
-                  <div>
-                    <Label>Differentiation</Label>
-                    <p className="mt-1">সহায়তা (Support): {displayedVersion.translation_bn.lesson.differentiation.support}</p>
-                    <p className="mt-1">মূল (Core): {displayedVersion.translation_bn.lesson.differentiation.core}</p>
-                    <p className="mt-1">গভীরতা (Greater depth): {displayedVersion.translation_bn.lesson.differentiation.greater_depth}</p>
-                  </div>
-                  <div>
-                    <Label>Homework note</Label>
-                    <p className="mt-1">{displayedVersion.translation_bn.lesson.homework}</p>
-                  </div>
-                  {displayedVersion.translation_bn.worksheet && (
-                    <div>
-                      <Label>{displayedVersion.translation_bn.worksheet.title}</Label>
-                      <p className="mt-1 text-muted-foreground">{displayedVersion.translation_bn.worksheet.instructions}</p>
-                    </div>
-                  )}
-                  {displayedVersion.translation_bn.homework && (
-                    <div>
-                      <Label>{displayedVersion.translation_bn.homework.title}</Label>
-                      <ul className="mt-1 list-disc pl-5">
-                        {displayedVersion.translation_bn.homework.tasks.map((t, i) => (
-                          <li key={i}>{t}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  {displayedVersion.safeguarding_flagged && (
-                    <div>
-                      <Label>Safeguarding / নিরাপত্তা</Label>
-                      <p className="mt-1 text-destructive">{displayedVersion.safeguarding_notes}</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </section>
-          )}
-        </div>
+              </section>
+            )}
+          </div>
+        )}
       </div>
 
       <aside className="w-64 shrink-0 print:hidden">

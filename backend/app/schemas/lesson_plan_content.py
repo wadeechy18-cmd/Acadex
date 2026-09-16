@@ -21,6 +21,23 @@ class Differentiation(BaseModel):
     greater_depth: str
 
 
+class TeacherScriptSection(BaseModel):
+    """A section a teacher can read straight off the screen and teach from,
+    rather than a paragraph they have to translate into action themselves.
+    Every field is optional-in-practice (empty string/list when nothing
+    applies to this section) so a section that's genuinely just an
+    activity with no dialogue doesn't need invented lines.
+    """
+
+    teacher_says: str = ""
+    ask: list[str] = Field(default_factory=list)
+    expected_answers: list[str] = Field(default_factory=list)
+    do: str = ""
+    students_do: str = ""
+    check_understanding: str = ""
+    watch_out_for: str = ""
+
+
 class LessonPlanContent(BaseModel):
     title: str
     overview: str
@@ -41,6 +58,14 @@ class LessonPlanContent(BaseModel):
     homework: str
     cross_curricular_links: str
     timeline: list[TimelineEntry]
+    # Classroom-script breakdown of four sections -- additive and optional
+    # so a plan generated (or imported into the library) before this
+    # existed still loads and renders fine via the plain string fields
+    # above, which always stay populated as a fallback/summary.
+    starter_script: TeacherScriptSection | None = None
+    teacher_explanation_script: TeacherScriptSection | None = None
+    guided_practice_script: TeacherScriptSection | None = None
+    plenary_script: TeacherScriptSection | None = None
 
 
 class WorksheetContent(BaseModel):
@@ -102,4 +127,8 @@ REGENERATABLE_SECTIONS: dict[str, type] = {
     "homework": str,
     "cross_curricular_links": str,
     "timeline": list[TimelineEntry],
+    "starter_script": TeacherScriptSection,
+    "teacher_explanation_script": TeacherScriptSection,
+    "guided_practice_script": TeacherScriptSection,
+    "plenary_script": TeacherScriptSection,
 }

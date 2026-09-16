@@ -14,7 +14,7 @@ lessons. Flagging errs toward under- rather than over-triggering because
 a flag's only effect is "a human should look at this before using it."
 """
 
-from app.schemas.lesson_plan_content import HomeworkContent, LessonPlanContent, WorksheetContent
+from app.schemas.lesson_plan_content import HomeworkContent, LessonPlanContent, TeacherScriptSection, WorksheetContent
 
 _FLAGGED_TERMS: dict[str, list[str]] = {
     "self-harm or suicide": ["self-harm", "how to self harm", "suicide method", "ways to end your life"],
@@ -71,6 +71,12 @@ _FLAGGED_TERMS: dict[str, list[str]] = {
 }
 
 
+def _script_text(script: TeacherScriptSection | None) -> list[str]:
+    if script is None:
+        return []
+    return [script.teacher_says, *script.ask, *script.expected_answers, script.do, script.students_do, script.check_understanding, script.watch_out_for]
+
+
 def _all_text(content: LessonPlanContent, worksheet: WorksheetContent | None, homework_task: HomeworkContent | None) -> str:
     parts = [
         content.title,
@@ -95,6 +101,10 @@ def _all_text(content: LessonPlanContent, worksheet: WorksheetContent | None, ho
         *content.misconceptions,
         *(entry.activity for entry in content.timeline),
         *(entry.description for entry in content.timeline),
+        *_script_text(content.starter_script),
+        *_script_text(content.teacher_explanation_script),
+        *_script_text(content.guided_practice_script),
+        *_script_text(content.plenary_script),
     ]
     if worksheet is not None:
         parts.extend(

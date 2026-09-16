@@ -24,7 +24,7 @@ from app.schemas.lesson_plan import (
     SaveVersionRequest,
 )
 from app.schemas.lesson_plan_content import REGENERATABLE_SECTIONS, HomeworkContent, LessonPlanContent, TranslatedContent, WorksheetContent
-from app.schemas.quick_lesson import QuickGenerateRequest
+from app.schemas.quick_lesson import QuickGenerateRequest, TopicProgressEntry
 from app.services import auth_service, lesson_plan_service
 
 router = APIRouter(prefix="/lesson-plans", tags=["lesson-plans"])
@@ -145,6 +145,18 @@ def list_plans(
         db, user, subject_id=subject_id, year_group_id=year_group_id, topic=topic, date_from=date_from, date_to=date_to, class_id=class_id
     )
     return [_summary_response(db, p) for p in plans]
+
+
+@router.get("/topic-suggestions", response_model=list[TopicProgressEntry])
+def topic_suggestions(
+    subject_id: uuid.UUID, year_group_id: uuid.UUID, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+) -> list[TopicProgressEntry]:
+    """Feeds the optional topic picker: every topic in curriculum sequence
+    for this subject/year group, each flagged with whether this teacher
+    has already covered it and which one Acadex would pick automatically
+    (new-vs-existing-teacher progression -- see lesson_plan_service).
+    """
+    return [TopicProgressEntry(**entry) for entry in lesson_plan_service.list_topic_progress(db, user, subject_id, year_group_id)]
 
 
 @router.get("/library", response_model=list[LessonPlanSummaryResponse])

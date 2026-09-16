@@ -6,7 +6,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import cm
 from reportlab.platypus import ListFlowable, ListItem, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-from app.schemas.lesson_plan_content import HomeworkContent, LessonPlanContent, WorksheetContent
+from app.schemas.lesson_plan_content import HomeworkContent, LessonPlanContent, TeacherScriptSection, WorksheetContent
 
 styles = getSampleStyleSheet()
 
@@ -32,15 +32,41 @@ def render_lesson_plan_pdf(content: LessonPlanContent, subject_name: str, year_g
             story.append(Paragraph(body or "-", styles["Normal"]))
         story.append(Spacer(1, 8))
 
+    def script_section(heading: str, script: TeacherScriptSection | None, fallback: str):
+        """A classroom-ready script prints as labelled lines a teacher can
+        read straight off the page; older plans without one fall back to
+        the plain summary text.
+        """
+        story.append(Paragraph(heading, styles["Heading2"]))
+        if script is None:
+            story.append(Paragraph(fallback or "-", styles["Normal"]))
+            story.append(Spacer(1, 8))
+            return
+        if script.teacher_says:
+            story.append(Paragraph(f"<b>TEACHER SAYS:</b> “{script.teacher_says}”", styles["Normal"]))
+        if script.do:
+            story.append(Paragraph(f"<b>DO:</b> {script.do}", styles["Normal"]))
+        for i, question in enumerate(script.ask):
+            story.append(Paragraph(f"<b>ASK:</b> {question}", styles["Normal"]))
+            if i < len(script.expected_answers):
+                story.append(Paragraph(f"<b>EXPECTED ANSWER:</b> {script.expected_answers[i]}", styles["Normal"]))
+        if script.students_do:
+            story.append(Paragraph(f"<b>STUDENTS DO:</b> {script.students_do}", styles["Normal"]))
+        if script.check_understanding:
+            story.append(Paragraph(f"<b>CHECK FOR UNDERSTANDING:</b> {script.check_understanding}", styles["Normal"]))
+        if script.watch_out_for:
+            story.append(Paragraph(f"<b>WATCH OUT FOR:</b> {script.watch_out_for}", styles["Normal"]))
+        story.append(Spacer(1, 8))
+
     section("Overview", content.overview)
     section("Learning objectives", content.learning_objectives)
     section("Success criteria", content.success_criteria)
     section("Key vocabulary", content.key_vocabulary)
     section("Prior knowledge", content.prior_knowledge)
     section("Resources needed", content.resources_needed)
-    section("Starter", content.starter)
-    section("Teacher explanation", content.teacher_explanation)
-    section("Guided practice", content.guided_practice)
+    script_section("Starter", content.starter_script, content.starter)
+    script_section("Main teaching / explanation", content.teacher_explanation_script, content.teacher_explanation)
+    script_section("Guided practice", content.guided_practice_script, content.guided_practice)
     section("Independent practice", content.independent_practice)
     section("Key questions", content.key_questions)
     section("Differentiation - Support", content.differentiation.support)
@@ -48,7 +74,7 @@ def render_lesson_plan_pdf(content: LessonPlanContent, subject_name: str, year_g
     section("Differentiation - Greater depth", content.differentiation.greater_depth)
     section("Assessment", content.assessment)
     section("Common misconceptions", content.misconceptions)
-    section("Plenary", content.plenary)
+    script_section("Plenary", content.plenary_script, content.plenary)
     section("Homework", content.homework)
     section("Cross-curricular links", content.cross_curricular_links)
 

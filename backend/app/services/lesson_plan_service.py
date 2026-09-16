@@ -274,6 +274,69 @@ def _match_curriculum_topic(
     return None
 
 
+def _topic_progress(
+    db: Session, user: User, subject_id: uuid.UUID, year_group_id: uuid.UUID
+) -> tuple[list[CurriculumTopic], set[uuid.UUID], bool]:
+    pos = db.query(ProgrammeOfStudy).filter_by(subject_id=subject_id, year_group_id=year_group_id).first()
+    topics = (
+        db.query(CurriculumTopic).filter_by(programme_of_study_id=pos.id).order_by(CurriculumTopic.sort_order).all() if pos else []
+    )
+    covered_ids = {
+        row[0]
+        for row in db.query(LessonPlan.curriculum_topic_id)
+        .filter(
+            LessonPlan.owner_user_id == user.id,
+            LessonPlan.subject_id == subject_id,
+            LessonPlan.year_group_id == year_group_id,
+            LessonPlan.curriculum_topic_id.isnot(None),
+        )
+        .distinct()
+        .all()
+    }
+    is_new = (
+        db.query(LessonPlan.id).filter_by(owner_user_id=user.id, subject_id=subject_id, year_group_id=year_group_id).first() is None
+    )
+    return topics, covered_ids, is_new
+
+
+def suggest_topic_progression(
+    db: Session, user: User, subject_id: uuid.UUID, year_group_id: uuid.UUID
+) -> tuple[CurriculumTopic | None, bool]:
+    """The core of "new vs existing teacher": a teacher with no prior plan
+    for this subject/year group starts at the first topic in the
+    curriculum sequence; an existing teacher gets the first topic they
+    haven't covered yet, in the same sequence. Once every topic has been
+    covered at least once, cycles back to the first rather than leaving
+    the teacher with nothing -- never invents a topic outside the
+    curriculum sequence.
+    """
+    topics, covered_ids, is_new = _topic_progress(db, user, subject_id, year_group_id)
+    if not topics:
+        return None, is_new
+    for topic in topics:
+        if topic.id not in covered_ids:
+            return topic, is_new
+    return topics[0], is_new
+
+
+def list_topic_progress(db: Session, user: User, subject_id: uuid.UUID, year_group_id: uuid.UUID) -> list[dict]:
+    """Feeds the optional topic picker: every topic in sequence for this
+    subject/year group, flagged with whether the teacher has already
+    covered it and which one Acadex would pick automatically.
+    """
+    topics, covered_ids, _is_new = _topic_progress(db, user, subject_id, year_group_id)
+    recommended, _ = suggest_topic_progression(db, user, subject_id, year_group_id)
+    return [
+        {
+            "id": topic.id,
+            "title": topic.title,
+            "covered": topic.id in covered_ids,
+            "is_recommended": recommended is not None and topic.id == recommended.id,
+        }
+        for topic in topics
+    ]
+
+
 def quick_generate_from_text(db: Session, ai_provider: AIProvider, user: User, text: str) -> LessonPlan:
     """The "type a sentence" entry point. One small AI call turns free text
     into structured intent (app.schemas.quick_lesson.QuickLessonIntent);
@@ -318,12 +381,35 @@ def quick_generate_from_text(db: Session, ai_provider: AIProvider, user: User, t
         )
 
     key_stage = db.get(KeyStage, year_group.key_stage_id)
-    topic = _match_curriculum_topic(db, subject.id, year_group.id, intent.topic)
+
+    topic: CurriculumTopic | None = None
+    if intent.topic:
+        topic = _match_curriculum_topic(db, subject.id, year_group.id, intent.topic)
+
     if topic is not None:
         objectives = db.query(Objective).filter_by(curriculum_topic_id=topic.id).all()
         topic_title, curriculum_topic_id, curriculum_objectives = topic.title, topic.id, [o.description for o in objectives]
-    else:
+    elif intent.topic:
+        # The teacher named something specific but it didn't match any
+        # curriculum topic -- keep their own wording rather than silently
+        # swapping in an unrelated suggested topic.
         topic_title, curriculum_topic_id, curriculum_objectives = intent.topic, None, []
+    else:
+        # No topic named at all (including "continue"/"next lesson"
+        # phrasing) -- new-vs-existing-teacher progression picks one.
+        suggested_topic, _is_new = suggest_topic_progression(db, user, subject.id, year_group.id)
+        if suggested_topic is None:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                "Couldn't tell what to teach -- no topic was given and there's no curriculum sequence set "
+                "up yet for this subject and year group. Try naming a topic, or use the detailed form.",
+            )
+        objectives = db.query(Objective).filter_by(curriculum_topic_id=suggested_topic.id).all()
+        topic_title, curriculum_topic_id, curriculum_objectives = (
+            suggested_topic.title,
+            suggested_topic.id,
+            [o.description for o in objectives],
+        )
 
     duration_minutes = max(5, min(240, intent.duration_minutes or DEFAULT_QUICK_DURATION_MINUTES))
 

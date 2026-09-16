@@ -5,13 +5,18 @@ INTENT_SYSTEM_PROMPT in app/planning/lesson_generation.py), then Python
 that intent against real data before any lesson content is generated.
 """
 
+import uuid
+
 from pydantic import BaseModel, Field
 
 
 class QuickLessonIntent(BaseModel):
     subject_name: str | None = None
     year_group_or_key_stage: str | None = None
-    topic: str
+    # Null when the teacher didn't name a topic (including "continue"/"next
+    # lesson" phrasing) -- app.services.lesson_plan_service then picks one
+    # via topic progression instead of guessing from vague wording.
+    topic: str | None = None
     relative_date_phrase: str | None = None
     duration_minutes: int | None = None
     ability_level: str | None = None
@@ -20,3 +25,10 @@ class QuickLessonIntent(BaseModel):
 
 class QuickGenerateRequest(BaseModel):
     text: str = Field(min_length=1, max_length=1000)
+
+
+class TopicProgressEntry(BaseModel):
+    id: uuid.UUID
+    title: str
+    covered: bool
+    is_recommended: bool

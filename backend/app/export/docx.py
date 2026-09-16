@@ -2,7 +2,7 @@ import io
 
 import docx
 
-from app.schemas.lesson_plan_content import HomeworkContent, LessonPlanContent, WorksheetContent
+from app.schemas.lesson_plan_content import HomeworkContent, LessonPlanContent, TeacherScriptSection, WorksheetContent
 
 
 def render_lesson_plan_docx(content: LessonPlanContent, subject_name: str, year_group_name: str) -> bytes:
@@ -21,15 +21,49 @@ def render_lesson_plan_docx(content: LessonPlanContent, subject_name: str, year_
         else:
             document.add_paragraph(body or "-")
 
+    def script_section(heading: str, script: TeacherScriptSection | None, fallback: str):
+        document.add_heading(heading, level=2)
+        if script is None:
+            document.add_paragraph(fallback or "-")
+            return
+        if script.teacher_says:
+            p = document.add_paragraph()
+            p.add_run("TEACHER SAYS: ").bold = True
+            p.add_run(f"“{script.teacher_says}”")
+        if script.do:
+            p = document.add_paragraph()
+            p.add_run("DO: ").bold = True
+            p.add_run(script.do)
+        for i, question in enumerate(script.ask):
+            p = document.add_paragraph()
+            p.add_run("ASK: ").bold = True
+            p.add_run(question)
+            if i < len(script.expected_answers):
+                p2 = document.add_paragraph()
+                p2.add_run("EXPECTED ANSWER: ").bold = True
+                p2.add_run(script.expected_answers[i])
+        if script.students_do:
+            p = document.add_paragraph()
+            p.add_run("STUDENTS DO: ").bold = True
+            p.add_run(script.students_do)
+        if script.check_understanding:
+            p = document.add_paragraph()
+            p.add_run("CHECK FOR UNDERSTANDING: ").bold = True
+            p.add_run(script.check_understanding)
+        if script.watch_out_for:
+            p = document.add_paragraph()
+            p.add_run("WATCH OUT FOR: ").bold = True
+            p.add_run(script.watch_out_for)
+
     section("Overview", content.overview)
     section("Learning objectives", content.learning_objectives)
     section("Success criteria", content.success_criteria)
     section("Key vocabulary", content.key_vocabulary)
     section("Prior knowledge", content.prior_knowledge)
     section("Resources needed", content.resources_needed)
-    section("Starter", content.starter)
-    section("Teacher explanation", content.teacher_explanation)
-    section("Guided practice", content.guided_practice)
+    script_section("Starter", content.starter_script, content.starter)
+    script_section("Main teaching / explanation", content.teacher_explanation_script, content.teacher_explanation)
+    script_section("Guided practice", content.guided_practice_script, content.guided_practice)
     section("Independent practice", content.independent_practice)
     section("Key questions", content.key_questions)
     section("Differentiation - Support", content.differentiation.support)
@@ -37,7 +71,7 @@ def render_lesson_plan_docx(content: LessonPlanContent, subject_name: str, year_
     section("Differentiation - Greater depth", content.differentiation.greater_depth)
     section("Assessment", content.assessment)
     section("Common misconceptions", content.misconceptions)
-    section("Plenary", content.plenary)
+    script_section("Plenary", content.plenary_script, content.plenary)
     section("Homework", content.homework)
     section("Cross-curricular links", content.cross_curricular_links)
 

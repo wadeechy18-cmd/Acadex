@@ -16,6 +16,8 @@ version alongside the English original. Produce JSON matching the required schem
 Rules:
 - Translate every piece of teaching text (titles, instructions, objectives, explanations, questions, \
 differentiation, misconceptions, etc.) into natural, correct Bangla that preserves the educational meaning.
+- Where a "teacher_says" field is present, translate it as something a teacher would actually say out \
+loud to a class in Bangla -- natural spoken classroom Bangla, never a stiff word-for-word rendering.
 - Do NOT translate: chemical formulas, mathematical formulas, units of measurement, numbers, symbols, or \
 curriculum codes.
 - For subject-specific technical terms, give the Bangla term followed by the English term in brackets, \

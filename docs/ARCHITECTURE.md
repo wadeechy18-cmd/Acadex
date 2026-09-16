@@ -84,29 +84,54 @@ lesson plan for tomorrow on separating mixtures"). Both paths converge on
 1. One small AI call (`INTENT_SYSTEM_PROMPT`) extracts structured intent
    (`app.schemas.quick_lesson.QuickLessonIntent`: subject/year-group
    wording, topic, a raw date phrase, duration, ability level) from the
-   teacher's sentence — it never generates lesson content itself.
+   teacher's sentence — it never generates lesson content itself. `topic`
+   is left null by design for "make me a lesson for tomorrow" or
+   "continue my next lesson" style requests with no topic named.
 2. Everything after that is deterministic Python, never AI:
    `app/planning/date_resolution.py` resolves "tomorrow" / a weekday name /
    an ISO date against today's real date; `app/planning/entity_matching.py`
    matches the extracted wording against the teacher's real
    Subject/YearGroup/CurriculumTopic rows (falling back to the subject/year
    group of the teacher's most recently created plan when unspecified, and
-   a 422 — never a guess — when neither can be resolved);
-   `app/planning/resource_matching.py` then searches the teacher's own
+   a 422 — never a guess — when neither can be resolved).
+3. When no topic was named, `lesson_plan_service.suggest_topic_progression`
+   picks one deterministically: a teacher new to a subject/year group (no
+   prior `LessonPlan` for it) starts at the first `CurriculumTopic` in
+   `sort_order`; an existing teacher gets the first topic they haven't
+   covered yet in that same sequence, cycling back to the start once
+   everything has been covered at least once. `list_topic_progress` feeds
+   an optional topic picker (`GET /lesson-plans/topic-suggestions`) showing
+   every topic flagged covered/recommended, for a teacher who'd rather
+   choose than type.
+4. `app/planning/resource_matching.py` then searches the teacher's own
    resource library (tag match on `Resource.subject_id`/`year_group_id`
    plus a keyword-overlap fallback for untagged files) and returns only the
    handful of relevant resources — the full library is never sent to the
-   model.
+   model. A plan generated with zero matched resources says so in the UI
+   rather than silently pretending the library had material.
 
 **Generation** (shared by both entry points) builds a prompt
 (`app/planning/lesson_generation.py`) from curriculum objectives and the
 matched resource excerpts, calls the `AIProvider` for one structured-JSON
-lesson (a 19-section `LessonPlanContent` schema — never one text blob),
-then makes two further small, single-purpose calls for a **worksheet**
-(`WorksheetContent`: recall/understanding/application/challenge questions)
-and **homework** (`HomeworkContent`: instructions, tasks, estimated
-minutes) — generated automatically with every lesson, never a separate
-ask. After generation:
+lesson (a `LessonPlanContent` schema — never one text blob), then makes two
+further small, single-purpose calls for a **worksheet** (`WorksheetContent`:
+recall/understanding/application/challenge questions) and **homework**
+(`HomeworkContent`: instructions, tasks, estimated minutes) — generated
+automatically with every lesson, never a separate ask.
+
+Four sections (starter, main teaching, guided practice, plenary) are also
+generated as a **classroom script** (`TeacherScriptSection`: `teacher_says`
+— natural spoken English a low-confidence teacher can read verbatim, plus
+`ask`/`expected_answers`/`do`/`students_do`/`check_understanding`/
+`watch_out_for`), stored alongside the plain-text summary of that section,
+never replacing it. The script fields are optional so plans generated (or
+imported into the curriculum library) before this existed still load and
+render fine, falling back to the summary text. The read-only lesson view
+(`/teacher/lesson-plans/[id]`, default "view" mode) renders these as
+labelled, classroom-ready blocks; an explicit "Edit" button switches to the
+full editable form.
+
+After generation:
 
 1. **Normalizes the timeline** (`app/planning/timeline.py`) against the
    requested duration — the model is asked to produce a timeline spanning

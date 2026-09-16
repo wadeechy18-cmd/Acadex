@@ -9,11 +9,11 @@ import { apiFetch, ApiError } from "@/lib/api-client";
 import type {
   AbilityLevel,
   CurriculumSummary,
-  CurriculumTopicSummary,
   KeyStageSummary,
   LessonPlan,
   Resource,
   SubjectSummary,
+  TopicProgressEntry,
   YearGroupSummary,
 } from "@/types";
 
@@ -39,7 +39,7 @@ export default function LessonPlannerPage() {
   const [keyStages, setKeyStages] = useState<KeyStageSummary[]>([]);
   const [yearGroups, setYearGroups] = useState<YearGroupSummary[]>([]);
   const [subjects, setSubjects] = useState<SubjectSummary[]>([]);
-  const [topics, setTopics] = useState<CurriculumTopicSummary[]>([]);
+  const [topics, setTopics] = useState<TopicProgressEntry[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
 
   const [curriculumId, setCurriculumId] = useState("");
@@ -90,11 +90,15 @@ export default function LessonPlannerPage() {
     if (!subjectId || !yearGroupId) return;
     setTopics([]);
     setTopicId("");
-    apiFetch<CurriculumTopicSummary[]>(
-      `/curriculum/topics?subject_id=${subjectId}&year_group_id=${yearGroupId}`,
+    apiFetch<TopicProgressEntry[]>(
+      `/lesson-plans/topic-suggestions?subject_id=${subjectId}&year_group_id=${yearGroupId}`,
       undefined,
       true
-    ).then(setTopics);
+    ).then((list) => {
+      setTopics(list);
+      const recommended = list.find((t) => t.is_recommended);
+      if (recommended) setTopicId(recommended.id);
+    });
   }, [subjectId, yearGroupId]);
 
   function toggleResource(id: string) {
@@ -191,8 +195,12 @@ export default function LessonPlannerPage() {
         />
         {quickError && <p className="text-sm text-destructive">{quickError}</p>}
         <Button type="submit" disabled={quickSubmitting || !quickText.trim()}>
-          {quickSubmitting ? "Generating…" : "Generate"}
+          {quickSubmitting ? "Generating…" : "Generate Lesson"}
         </Button>
+        <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+          <p>✓ Your resources -- already available, searched automatically</p>
+          <p>✓ Curriculum -- based on your teaching programme</p>
+        </div>
       </form>
 
       <button
@@ -252,15 +260,27 @@ export default function LessonPlannerPage() {
         </div>
 
         <div>
-          <Label>Topic</Label>
-          <select className={selectClass} value={topicId} onChange={(e) => setTopicId(e.target.value)} disabled={!subjectId}>
-            <option value="">Enter my own topic below...</option>
-            {topics.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.title}
-              </option>
-            ))}
-          </select>
+          <Label>Choose a topic</Label>
+          {topics.length > 0 ? (
+            <div className="mt-2 flex flex-col gap-1 rounded-md border p-3">
+              {topics.map((t) => (
+                <label key={t.id} className="flex items-center gap-2 text-sm">
+                  <input type="radio" name="topic" checked={topicId === t.id} onChange={() => setTopicId(t.id)} />
+                  {t.title}
+                  {t.is_recommended && <span className="text-xs text-primary">(recommended next)</span>}
+                  {t.covered && !t.is_recommended && <span className="text-xs text-muted-foreground">(already covered)</span>}
+                </label>
+              ))}
+              <label className="flex items-center gap-2 text-sm">
+                <input type="radio" name="topic" checked={topicId === ""} onChange={() => setTopicId("")} />
+                Enter my own topic below...
+              </label>
+            </div>
+          ) : (
+            <p className="mt-1 text-xs text-muted-foreground">
+              {subjectId ? "No curriculum topics found -- enter your own below." : "Choose a subject first, or enter your own topic below."}
+            </p>
+          )}
           {!topicId && (
             <Input
               className="mt-2"

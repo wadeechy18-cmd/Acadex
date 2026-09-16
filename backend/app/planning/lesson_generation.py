@@ -20,6 +20,24 @@ end_minute values run from 0 to the lesson's full duration with no gaps or overl
 or otherwise unsuitable for the stated year group, even if a resource or instruction suggests it.
 - If resource excerpts are provided, actively draw on them (their content, vocabulary, examples) \
 rather than ignoring them.
+
+The "starter", "teacher_explanation", "guided_practice" and "plenary" fields must each stay a short \
+plain-text summary of that section, AND you must ALSO fill in the matching "starter_script", \
+"teacher_explanation_script", "guided_practice_script" and "plenary_script" fields with a genuine, \
+classroom-ready script a teacher with low confidence speaking aloud could read straight off the screen:
+- "teacher_says": natural, spoken classroom English the teacher can say out loud verbatim (not a \
+description of what to say -- the actual words), e.g. "Good morning everyone. Today we are going to \
+learn about..."
+- "ask": specific questions to pose to the class during this section (empty list if none apply).
+- "expected_answers": what a typical pupil might say back, matched one-to-one with "ask" where possible.
+- "do": a concrete instruction for what the TEACHER physically does (show an object, write on the \
+board, demonstrate a method) -- empty string if there's nothing beyond talking.
+- "students_do": a concrete instruction for what PUPILS do during this section -- empty string only \
+for a purely teacher-led moment.
+- "check_understanding": one quick, concrete way to check pupils have understood before moving on.
+- "watch_out_for": a common misconception or mistake specific to this section -- empty string if none.
+Never leave "teacher_says" empty for a section that involves the teacher talking to the class -- that's \
+the whole point of the script.
 """
 
 
@@ -95,8 +113,11 @@ Rules:
 "early years", "Year 2"), not a curriculum code.
 - "relative_date_phrase" is the teacher's own date wording verbatim (e.g. "tomorrow", "next Monday", \
 "15 September"), or null if no date was mentioned.
-- "topic" is required. If the teacher didn't name a specific curriculum topic, use their general \
-description of what they want to teach as the topic.
+- "topic" is the teacher's own description of what they want to teach, if they named or described one \
+(e.g. "separating mixtures", "phonics"). Leave it null when the teacher didn't name or describe a \
+specific topic at all -- including when they said something like "make me a lesson for tomorrow" with \
+nothing else, or explicitly asked to continue/carry on (e.g. "continue my next lesson", "what's next", \
+"carry on from last time"). Acadex picks the actual topic itself in that case -- never guess one here.
 - "ability_level" must be one of "support", "core", "greater_depth", "mixed" if and only if the teacher's \
 wording clearly implies one of those; otherwise null.
 """

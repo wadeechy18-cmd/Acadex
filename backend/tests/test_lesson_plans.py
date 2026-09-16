@@ -168,6 +168,28 @@ def test_generate_creates_plan_with_normalized_timeline(client, db_session):
     assert timeline[-1]["end_minute"] == 30
 
 
+def test_generate_carries_teacher_script_sections_through_to_the_response(client, db_session):
+    from app.schemas.lesson_plan_content import TeacherScriptSection
+
+    seed = _seed_curriculum(db_session)
+    scripted = SAMPLE_CONTENT.model_copy(deep=True)
+    scripted.starter_script = TeacherScriptSection(
+        teacher_says="Good morning everyone.", ask=["What is a half?"], expected_answers=["Two equal parts."]
+    )
+    override_ai_provider(scripted)
+    teacher = register_teacher(client)
+
+    res = client.post("/api/v1/lesson-plans/generate", json=_generate_payload(seed), headers=auth_headers(teacher))
+    clear_ai_override()
+    assert res.status_code == 201, res.text
+    script = res.json()["current_version"]["content"]["starter_script"]
+    assert script["teacher_says"] == "Good morning everyone."
+    assert script["ask"] == ["What is a half?"]
+
+    # A plan generated without script sections still round-trips fine.
+    assert res.json()["current_version"]["content"]["teacher_explanation_script"] is None
+
+
 def test_generate_normalizes_a_timeline_that_does_not_match_duration(client, db_session):
     seed = _seed_curriculum(db_session)
     bad_content = SAMPLE_CONTENT.model_copy(deep=True)

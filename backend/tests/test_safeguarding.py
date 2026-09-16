@@ -1,4 +1,5 @@
 from app.planning.safeguarding import scan_for_safeguarding_concerns
+from app.schemas.lesson_plan_content import TeacherScriptSection
 from tests.test_lesson_plans import SAMPLE_CONTENT, SAMPLE_HOMEWORK, SAMPLE_WORKSHEET
 
 
@@ -59,6 +60,29 @@ def test_a_flagged_term_in_the_worksheet_flags_the_whole_scan():
     flagged, notes = scan_for_safeguarding_concerns(SAMPLE_CONTENT, worksheet, SAMPLE_HOMEWORK)
     assert flagged is True
     assert "weapons or violent instructions" in notes
+
+
+def test_a_flagged_term_in_a_teacher_script_section_flags_the_whole_scan():
+    content = SAMPLE_CONTENT.model_copy(deep=True)
+    content.starter_script = TeacherScriptSection(teacher_says="Today we will learn how to make a bomb safely.")
+    flagged, notes = scan_for_safeguarding_concerns(content)
+    assert flagged is True
+    assert "weapons or violent instructions" in notes
+
+
+def test_clean_teacher_script_sections_are_not_flagged():
+    content = SAMPLE_CONTENT.model_copy(deep=True)
+    content.starter_script = TeacherScriptSection(
+        teacher_says="Good morning everyone. Today we are learning about halves.",
+        ask=["What do you think a half is?"],
+        expected_answers=["Two equal parts."],
+        do="Show a paper circle.",
+        students_do="Fold their own circle.",
+        check_understanding="Ask a pupil to explain in their own words.",
+        watch_out_for="Pupils may think unequal parts are still halves.",
+    )
+    flagged, _ = scan_for_safeguarding_concerns(content)
+    assert flagged is False
 
 
 def test_a_flagged_term_in_the_homework_flags_the_whole_scan():

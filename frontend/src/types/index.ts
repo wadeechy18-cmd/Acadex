@@ -82,6 +82,13 @@ export interface CurriculumTopicSummary {
   sort_order: number;
 }
 
+export interface TopicProgressEntry {
+  id: string;
+  title: string;
+  covered: boolean;
+  is_recommended: boolean;
+}
+
 export interface ObjectiveSummary {
   id: string;
   code: string;
@@ -104,6 +111,16 @@ export interface Differentiation {
   greater_depth: string;
 }
 
+export interface TeacherScriptSection {
+  teacher_says: string;
+  ask: string[];
+  expected_answers: string[];
+  do: string;
+  students_do: string;
+  check_understanding: string;
+  watch_out_for: string;
+}
+
 export interface LessonPlanContent {
   title: string;
   overview: string;
@@ -124,6 +141,10 @@ export interface LessonPlanContent {
   homework: string;
   cross_curricular_links: string;
   timeline: TimelineEntry[];
+  starter_script: TeacherScriptSection | null;
+  teacher_explanation_script: TeacherScriptSection | null;
+  guided_practice_script: TeacherScriptSection | null;
+  plenary_script: TeacherScriptSection | null;
 }
 
 export interface WorksheetContent {
