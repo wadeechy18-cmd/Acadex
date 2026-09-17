@@ -11,7 +11,10 @@ into their own plans via POST /lesson-plans/library/{id}/duplicate, which
 reuses the existing duplicate_plan service function; the library copy
 itself is never edited in place.
 
-Idempotent: skips entirely if the library account already owns any plans.
+Idempotent: for each (subject, year group, topic) already represented among
+the library's plans, its lessons are skipped -- safe to re-run after adding
+new curriculum pack files (e.g. previously-missing weeks) without
+duplicating what's already imported.
 
 Usage: python -m scripts.seed_lesson_plan_library
 """
@@ -121,9 +124,12 @@ def run() -> None:
     db = SessionLocal()
     try:
         library_user = _get_or_create_library_user(db)
-        if db.query(LessonPlan).filter_by(owner_user_id=library_user.id).first():
-            print("Lesson plan library already seeded -- skipping.")
-            return
+        already_imported = {
+            (subject_id, year_group_id, topic_title)
+            for subject_id, year_group_id, topic_title in db.query(
+                LessonPlan.subject_id, LessonPlan.year_group_id, LessonPlan.topic_title
+            ).filter_by(owner_user_id=library_user.id)
+        }
 
         imported = 0
         for path in sorted(glob.glob(f"{CURRICULUM_PACKS_DIR}/**/*.json", recursive=True)):
@@ -160,6 +166,9 @@ def run() -> None:
                 if pos is None:
                     continue
                 topic = db.query(CurriculumTopic).filter_by(programme_of_study_id=pos.id, title=sub_theme).first()
+                topic_title = topic.title if topic else sub_theme
+                if (subject.id, year_group.id, topic_title) in already_imported:
+                    continue
 
                 content = _content_from_lesson(lesson)
                 content.timeline = normalize_timeline(content.timeline, duration)
@@ -171,7 +180,7 @@ def run() -> None:
                     subject_id=subject.id,
                     year_group_id=year_group.id,
                     curriculum_topic_id=topic.id if topic else None,
-                    topic_title=topic.title if topic else sub_theme,
+                    topic_title=topic_title,
                     duration_minutes=duration,
                     ability_level=AbilityLevel.MIXED,
                 )
