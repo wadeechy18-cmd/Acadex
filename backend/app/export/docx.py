@@ -34,6 +34,10 @@ def render_lesson_plan_docx(content: LessonPlanContent, subject_name: str, year_
             p = document.add_paragraph()
             p.add_run("DO: ").bold = True
             p.add_run(script.do)
+        if script.show_resource:
+            p = document.add_paragraph()
+            p.add_run("SHOW / RESOURCES: ").bold = True
+            p.add_run(script.show_resource)
         for i, question in enumerate(script.ask):
             p = document.add_paragraph()
             p.add_run("ASK: ").bold = True
@@ -50,6 +54,14 @@ def render_lesson_plan_docx(content: LessonPlanContent, subject_name: str, year_
             p = document.add_paragraph()
             p.add_run("CHECK FOR UNDERSTANDING: ").bold = True
             p.add_run(script.check_understanding)
+        if script.if_struggling:
+            p = document.add_paragraph()
+            p.add_run("IF STUDENTS STRUGGLE: ").bold = True
+            p.add_run(script.if_struggling)
+        if script.if_early_finishers:
+            p = document.add_paragraph()
+            p.add_run("IF STUDENTS FINISH EARLY: ").bold = True
+            p.add_run(script.if_early_finishers)
         if script.watch_out_for:
             p = document.add_paragraph()
             p.add_run("WATCH OUT FOR: ").bold = True

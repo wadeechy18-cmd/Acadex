@@ -113,11 +113,14 @@ export interface Differentiation {
 
 export interface TeacherScriptSection {
   teacher_says: string;
+  do: string;
+  show_resource: string;
   ask: string[];
   expected_answers: string[];
-  do: string;
   students_do: string;
   check_understanding: string;
+  if_struggling: string;
+  if_early_finishers: string;
   watch_out_for: string;
 }
 

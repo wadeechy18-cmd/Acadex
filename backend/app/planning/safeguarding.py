@@ -122,6 +122,61 @@ def _all_text(content: LessonPlanContent, worksheet: WorksheetContent | None, ho
     return " ".join(parts).lower()
 
 
+# What a flagged category actually means for the teacher, plus one concrete,
+# generally-applicable safer alternative -- so the note tells them something
+# useful to act on, not just a category name. This is still a fixed,
+# deterministic mapping (the same "flag, never decide" principle as the
+# keyword list itself), not a judgement call about this specific lesson.
+_CATEGORY_GUIDANCE: dict[str, str] = {
+    "self-harm or suicide": (
+        "This lesson may reference self-harm or suicide. Safer option: remove this content and consult "
+        "your school's designated safeguarding lead before teaching anything on this topic."
+    ),
+    "weapons or violent instructions": (
+        "This lesson may include instructions for making a weapon. Safer option: replace with a "
+        "description or diagram that does not give working, reproducible instructions."
+    ),
+    "sexual content": (
+        "This lesson may include sexual content. Safer option: remove it and check it is age-appropriate "
+        "against your school's RSE (relationships and sex education) policy before teaching it."
+    ),
+    "extremism or hate": (
+        "This lesson may include extremist or hateful content. Safer option: remove it and raise it with "
+        "your school's safeguarding lead -- this can be relevant even in a history or current-affairs context."
+    ),
+    "substance misuse instructions": (
+        "This lesson may include instructions related to drug use or acquisition. Safer option: keep any "
+        "discussion of substances at an educational, non-instructional level (effects and risks, not how-to)."
+    ),
+    "unsafe practical activity or equipment": (
+        "This lesson involves equipment or a practical activity without a stated safety precaution (e.g. "
+        "supervision or protective equipment). Safer option: add explicit supervision/PPE instructions, or "
+        "substitute a lower-risk version (e.g. pre-cut materials instead of pupils using scissors unsupervised)."
+    ),
+    "activity requiring formal risk assessment or school permission": (
+        "This lesson involves an off-site visit or an activity that normally needs a formal risk assessment "
+        "or parental consent. Safer option: check this has been through your school's usual approval process "
+        "before running it, or adapt the activity to stay on-site."
+    ),
+    "online safety or personal information risk": (
+        "This lesson may ask pupils to share personal information online or contact someone online. Safer "
+        "option: remove any request for personal details and use a controlled, teacher-supervised example instead."
+    ),
+    "inappropriate one-to-one or physical contact": (
+        "This lesson describes a one-to-one or physical-contact situation. Safer option: keep interactions "
+        "visible/in open spaces and follow your school's safer-working-practice policy."
+    ),
+    "bullying-related risk": (
+        "This lesson may single out or humiliate a pupil in front of the class. Safer option: rephrase the "
+        "activity so no individual pupil is put on the spot or mocked."
+    ),
+    "discriminatory or harmful content": (
+        "This lesson may include discriminatory or stereotyped content. Safer option: rewrite it to challenge "
+        "rather than state the stereotype, or remove it."
+    ),
+}
+
+
 def scan_for_safeguarding_concerns(
     content: LessonPlanContent,
     worksheet: WorksheetContent | None = None,
@@ -138,10 +193,12 @@ def scan_for_safeguarding_concerns(
     if not matched_categories:
         return False, None
 
-    note = (
-        "Automated safeguarding check flagged this lesson plan for manual review before use. "
-        f"Possible concern area(s): {', '.join(matched_categories)}. "
-        "This is a keyword-based software check only, not a substitute for your school's safeguarding "
+    guidance = [
+        f"{category}: {_CATEGORY_GUIDANCE.get(category, 'possible concern area -- review before use.')}"
+        for category in matched_categories
+    ]
+    note = " ".join(guidance) + (
+        " This is a keyword-based software check only, not a substitute for your school's safeguarding "
         "policy or your own professional judgement -- it does not guarantee the content is safe or "
         "unsafe, only that it may be worth a closer look."
     )

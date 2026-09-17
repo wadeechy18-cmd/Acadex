@@ -391,6 +391,15 @@ export default function LessonPlanEditorPage() {
             {showBangla && bnScript?.do && <p className={showEnglish ? "mt-1 text-muted-foreground" : ""}>বাংলা: {bnScript.do}</p>}
           </div>
         )}
+        {script.show_resource && (
+          <div>
+            <span className="font-semibold">SHOW / RESOURCES: </span>
+            {showEnglish && <span>{script.show_resource}</span>}
+            {showBangla && bnScript?.show_resource && (
+              <p className={showEnglish ? "mt-1 text-muted-foreground" : ""}>বাংলা: {bnScript.show_resource}</p>
+            )}
+          </div>
+        )}
         {script.ask.length > 0 && (
           <div>
             <span className="font-semibold">ASK: </span>
@@ -424,6 +433,18 @@ export default function LessonPlanEditorPage() {
           <div>
             <span className="font-semibold">CHECK FOR UNDERSTANDING: </span>
             <span>{script.check_understanding}</span>
+          </div>
+        )}
+        {script.if_struggling && (
+          <div>
+            <span className="font-semibold">IF STUDENTS STRUGGLE: </span>
+            <span>{script.if_struggling}</span>
+          </div>
+        )}
+        {script.if_early_finishers && (
+          <div>
+            <span className="font-semibold">IF STUDENTS FINISH EARLY: </span>
+            <span>{script.if_early_finishers}</span>
           </div>
         )}
         {script.watch_out_for && (
@@ -576,21 +597,21 @@ export default function LessonPlanEditorPage() {
             <section>
               <h2 className="text-xl font-bold">Lesson Structure</h2>
 
-              <div className="mt-4 rounded-lg border p-4">
-                <div className="flex items-baseline justify-between">
-                  <h3 className="font-semibold">{starterStep}. Starter</h3>
+              <details open className="mt-4 rounded-lg border p-4">
+                <summary className="flex cursor-pointer items-baseline justify-between">
+                  <h3 className="inline font-semibold">{starterStep}. Starter</h3>
                   {starterTime && <span className="text-xs text-muted-foreground">{starterTime}</span>}
-                </div>
+                </summary>
                 <div className="mt-2">
                   <ScriptBlock label="" script={content.starter_script} fallbackText={content.starter} bnScript={translatedLesson?.starter_script} />
                 </div>
-              </div>
+              </details>
 
-              <div className="mt-4 rounded-lg border p-4">
-                <div className="flex items-baseline justify-between">
-                  <h3 className="font-semibold">{mainStep}. Main Teaching / Explanation</h3>
+              <details open className="mt-4 rounded-lg border p-4">
+                <summary className="flex cursor-pointer items-baseline justify-between">
+                  <h3 className="inline font-semibold">{mainStep}. Main Teaching / Explanation</h3>
                   {mainTime && <span className="text-xs text-muted-foreground">{mainTime}</span>}
-                </div>
+                </summary>
                 <div className="mt-2">
                   <ScriptBlock
                     label=""
@@ -599,14 +620,14 @@ export default function LessonPlanEditorPage() {
                     bnScript={translatedLesson?.teacher_explanation_script}
                   />
                 </div>
-              </div>
+              </details>
 
               {guidedStep != null && (
-                <div className="mt-4 rounded-lg border p-4">
-                  <div className="flex items-baseline justify-between">
-                    <h3 className="font-semibold">{guidedStep}. Guided Practice</h3>
+                <details open className="mt-4 rounded-lg border p-4">
+                  <summary className="flex cursor-pointer items-baseline justify-between">
+                    <h3 className="inline font-semibold">{guidedStep}. Guided Practice</h3>
                     {guidedTime && <span className="text-xs text-muted-foreground">{guidedTime}</span>}
-                  </div>
+                  </summary>
                   <div className="mt-2">
                     <ScriptBlock
                       label=""
@@ -615,14 +636,14 @@ export default function LessonPlanEditorPage() {
                       bnScript={translatedLesson?.guided_practice_script}
                     />
                   </div>
-                </div>
+                </details>
               )}
 
-              <div className="mt-4 rounded-lg border p-4">
-                <div className="flex items-baseline justify-between">
-                  <h3 className="font-semibold">{independentStep}. Independent Activity</h3>
+              <details open className="mt-4 rounded-lg border p-4">
+                <summary className="flex cursor-pointer items-baseline justify-between">
+                  <h3 className="inline font-semibold">{independentStep}. Independent Activity</h3>
                   {independentTime && <span className="text-xs text-muted-foreground">{independentTime}</span>}
-                </div>
+                </summary>
                 {!independentDuplicatesMain && (
                   <>
                     <p className="mt-2">{content.independent_practice}</p>
@@ -643,17 +664,17 @@ export default function LessonPlanEditorPage() {
                     <p className="text-sm">{content.differentiation.greater_depth}</p>
                   </div>
                 </div>
-              </div>
+              </details>
 
-              <div className="mt-4 rounded-lg border p-4">
-                <div className="flex items-baseline justify-between">
-                  <h3 className="font-semibold">{plenaryStep}. Plenary</h3>
+              <details open className="mt-4 rounded-lg border p-4">
+                <summary className="flex cursor-pointer items-baseline justify-between">
+                  <h3 className="inline font-semibold">{plenaryStep}. Plenary</h3>
                   {plenaryTime && <span className="text-xs text-muted-foreground">{plenaryTime}</span>}
-                </div>
+                </summary>
                 <div className="mt-2">
                   <ScriptBlock label="" script={content.plenary_script} fallbackText={content.plenary} bnScript={translatedLesson?.plenary_script} />
                 </div>
-              </div>
+              </details>
             </section>
 
             {homeworkTask && (
@@ -721,18 +742,27 @@ export default function LessonPlanEditorPage() {
               </section>
             )}
 
-            <section className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
-              <h2 className="text-lg font-semibold text-destructive">Safeguarding &amp; Safety</h2>
+            <details
+              open
+              className={
+                displayedVersion?.safeguarding_flagged
+                  ? "rounded-lg border border-destructive/30 bg-destructive/5 p-4"
+                  : "rounded-lg border border-emerald-300 bg-emerald-50 p-4"
+              }
+            >
+              <summary className={"cursor-pointer text-lg font-semibold " + (displayedVersion?.safeguarding_flagged ? "text-destructive" : "text-emerald-800")}>
+                Safeguarding &amp; Safety
+              </summary>
               {displayedVersion?.safeguarding_flagged ? (
-                <p className="mt-2 text-sm text-destructive">⚠ {displayedVersion.safeguarding_notes}</p>
+                <p className="mt-2 text-sm text-destructive">⚠ SAFETY CONSIDERATION — {displayedVersion.safeguarding_notes}</p>
               ) : (
-                <p className="mt-2 text-sm text-muted-foreground">No automated safety concerns were flagged for this lesson.</p>
+                <p className="mt-2 text-sm text-emerald-800">✓ No specific concerns identified by the automated check.</p>
               )}
               <p className="mt-2 text-xs text-muted-foreground">
                 This automated check does not guarantee the lesson is safe. You and your school remain responsible for
                 following your own safeguarding policies, risk assessments and professional procedures.
               </p>
-            </section>
+            </details>
           </div>
         ) : (
           <div className="mt-8 flex flex-col gap-8">

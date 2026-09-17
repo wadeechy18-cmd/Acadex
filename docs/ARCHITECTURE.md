@@ -122,14 +122,27 @@ automatically with every lesson, never a separate ask.
 Four sections (starter, main teaching, guided practice, plenary) are also
 generated as a **classroom script** (`TeacherScriptSection`: `teacher_says`
 — natural spoken English a low-confidence teacher can read verbatim, plus
-`ask`/`expected_answers`/`do`/`students_do`/`check_understanding`/
-`watch_out_for`), stored alongside the plain-text summary of that section,
-never replacing it. The script fields are optional so plans generated (or
-imported into the curriculum library) before this existed still load and
-render fine, falling back to the summary text. The read-only lesson view
-(`/teacher/lesson-plans/[id]`, default "view" mode) renders these as
-labelled, classroom-ready blocks; an explicit "Edit" button switches to the
-full editable form.
+`do`/`show_resource`/`ask`/`expected_answers`/`students_do`/
+`check_understanding`/`if_struggling`/`if_early_finishers`/`watch_out_for`),
+stored alongside the plain-text summary of that section, never replacing
+it. The script fields are optional so plans generated (or imported into
+the curriculum library) before this existed still load and render fine,
+falling back to the summary text. The `SYSTEM_PROMPT` in
+`app/planning/lesson_generation.py` explicitly bans vague, summary-style
+phrasing ("model the concept", "discuss the topic", "recap previous
+learning") and requires real classroom dialogue, concrete actions, and
+paired ask/expected-answer questions instead — the goal is a lesson a
+teacher can read from and teach, not a description of one. Regenerating a
+plain section (e.g. "starter") always regenerates its paired script field
+in the same call (`PAIRED_SCRIPT_SECTION` in
+`app/schemas/lesson_plan_content.py`), so the two never drift apart. The
+read-only lesson view (`/teacher/lesson-plans/[id]`, default "view" mode)
+renders these as labelled, collapsible, classroom-ready blocks (native
+`<details>`/`<summary>`); an explicit "Edit" button switches to the full
+editable form. A section whose plain-text content is identical to another
+section's (which happens for pre-authored curriculum-library plans that
+have no distinct wording for it in their source data) is hidden rather
+than shown twice.
 
 After generation:
 
@@ -143,9 +156,13 @@ After generation:
    practical activities/equipment, activities needing a risk assessment or
    school permission, online safety/personal information risk, one-to-one
    or physical contact risk, bullying, and discriminatory content) for
-   human review. It never blocks or edits content and never claims to
-   guarantee legal or policy compliance; it's a software safeguard, not a
-   substitute for school policy or professional judgement.
+   human review. Each category maps to a fixed, deterministic explanation
+   plus one concrete safer alternative (`_CATEGORY_GUIDANCE`) — e.g. "use
+   pre-cut materials instead of pupils using scissors unsupervised" — not
+   just a category name, so the flag gives the teacher something to act on.
+   It never blocks or edits content and never claims to guarantee legal or
+   policy compliance; it's a software safeguard, not a substitute for
+   school policy or professional judgement.
 3. Persists a new `LessonPlanVersion` (content, worksheet, homework
    together).
 

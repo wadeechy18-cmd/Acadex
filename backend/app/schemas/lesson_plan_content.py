@@ -30,11 +30,14 @@ class TeacherScriptSection(BaseModel):
     """
 
     teacher_says: str = ""
+    do: str = ""
+    show_resource: str = ""
     ask: list[str] = Field(default_factory=list)
     expected_answers: list[str] = Field(default_factory=list)
-    do: str = ""
     students_do: str = ""
     check_understanding: str = ""
+    if_struggling: str = ""
+    if_early_finishers: str = ""
     watch_out_for: str = ""
 
 
@@ -104,6 +107,17 @@ class TranslatedContent(BaseModel):
     worksheet: WorksheetContent | None = None
     homework: HomeworkContent | None = None
 
+
+# A plain-text/list section that has a matching classroom-script field must
+# have both regenerated together -- otherwise the script (what the view page
+# actually displays) would silently go stale while the plain summary field
+# (used only as its fallback and in exports) changes underneath it.
+PAIRED_SCRIPT_SECTION: dict[str, str] = {
+    "starter": "starter_script",
+    "teacher_explanation": "teacher_explanation_script",
+    "guided_practice": "guided_practice_script",
+    "plenary": "plenary_script",
+}
 
 # Sections a teacher can ask Acadex to regenerate individually -- title is
 # trivial to hand-edit and is excluded so "regenerate" always means

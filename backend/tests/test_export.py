@@ -31,8 +31,11 @@ def _scripted_content():
         ask=["What is a half?"],
         expected_answers=["Two equal parts."],
         do="Show a paper circle.",
+        show_resource="A paper circle visible to the whole class.",
         students_do="Fold their own circle.",
         check_understanding="Ask a pupil to explain.",
+        if_struggling="Fold the circle again slowly, naming each half aloud.",
+        if_early_finishers="Ask them to find a half of a different shape.",
         watch_out_for="Unequal parts mistaken for halves.",
     )
     return content
@@ -44,6 +47,9 @@ def test_export_pdf_renders_teacher_script_sections():
     text = "\n".join(page.extract_text() or "" for page in reader.pages)
     assert "TEACHER SAYS" in text
     assert "Good morning everyone" in text
+    assert "SHOW / RESOURCES" in text
+    assert "IF STUDENTS STRUGGLE" in text
+    assert "IF STUDENTS FINISH EARLY" in text
     assert "WATCH OUT FOR" in text
 
 
@@ -53,6 +59,9 @@ def test_export_docx_renders_teacher_script_sections():
     full_text = "\n".join(p.text for p in document.paragraphs)
     assert "TEACHER SAYS:" in full_text
     assert "Good morning everyone" in full_text
+    assert "SHOW / RESOURCES:" in full_text
+    assert "IF STUDENTS STRUGGLE:" in full_text
+    assert "IF STUDENTS FINISH EARLY:" in full_text
     assert "EXPECTED ANSWER:" in full_text
 
 

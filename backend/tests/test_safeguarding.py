@@ -39,6 +39,13 @@ def test_unsafe_practical_activity_terms_are_flagged():
     assert "unsafe practical activity or equipment" in notes
 
 
+def test_flagged_note_gives_a_concrete_safer_option_not_just_a_category_name():
+    content = SAMPLE_CONTENT.model_copy(deep=True)
+    content.teacher_explanation = "Handle broken glass with bare hands to feel the texture."
+    _, notes = scan_for_safeguarding_concerns(content)
+    assert "safer option" in notes.lower()
+
+
 def test_offsite_trip_terms_are_flagged():
     content = SAMPLE_CONTENT.model_copy(deep=True)
     content.starter = "Begin with a school trip to the local park."

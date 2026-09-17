@@ -46,6 +46,8 @@ def render_lesson_plan_pdf(content: LessonPlanContent, subject_name: str, year_g
             story.append(Paragraph(f"<b>TEACHER SAYS:</b> “{script.teacher_says}”", styles["Normal"]))
         if script.do:
             story.append(Paragraph(f"<b>DO:</b> {script.do}", styles["Normal"]))
+        if script.show_resource:
+            story.append(Paragraph(f"<b>SHOW / RESOURCES:</b> {script.show_resource}", styles["Normal"]))
         for i, question in enumerate(script.ask):
             story.append(Paragraph(f"<b>ASK:</b> {question}", styles["Normal"]))
             if i < len(script.expected_answers):
@@ -54,6 +56,10 @@ def render_lesson_plan_pdf(content: LessonPlanContent, subject_name: str, year_g
             story.append(Paragraph(f"<b>STUDENTS DO:</b> {script.students_do}", styles["Normal"]))
         if script.check_understanding:
             story.append(Paragraph(f"<b>CHECK FOR UNDERSTANDING:</b> {script.check_understanding}", styles["Normal"]))
+        if script.if_struggling:
+            story.append(Paragraph(f"<b>IF STUDENTS STRUGGLE:</b> {script.if_struggling}", styles["Normal"]))
+        if script.if_early_finishers:
+            story.append(Paragraph(f"<b>IF STUDENTS FINISH EARLY:</b> {script.if_early_finishers}", styles["Normal"]))
         if script.watch_out_for:
             story.append(Paragraph(f"<b>WATCH OUT FOR:</b> {script.watch_out_for}", styles["Normal"]))
         story.append(Spacer(1, 8))

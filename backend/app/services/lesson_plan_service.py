@@ -31,7 +31,14 @@ from app.planning.safeguarding import scan_for_safeguarding_concerns
 from app.planning.timeline import normalize_timeline
 from app.planning.translation import translate_content
 from app.schemas.lesson_plan import GenerateLessonPlanRequest
-from app.schemas.lesson_plan_content import REGENERATABLE_SECTIONS, HomeworkContent, LessonPlanContent, TranslatedContent, WorksheetContent
+from app.schemas.lesson_plan_content import (
+    PAIRED_SCRIPT_SECTION,
+    REGENERATABLE_SECTIONS,
+    HomeworkContent,
+    LessonPlanContent,
+    TranslatedContent,
+    WorksheetContent,
+)
 from app.schemas.quick_lesson import QuickLessonIntent
 from app.services import school_service
 
@@ -703,17 +710,30 @@ def regenerate_section(
     current = get_current_version(db, plan)
     current_content = LessonPlanContent.model_validate(current.content)
 
+    # A section with a matching classroom-script field (e.g. "starter" /
+    # "starter_script") must regenerate both together in the same call --
+    # the script is what the view page actually displays, so leaving it
+    # behind would make the regeneration invisible to the teacher.
+    paired_script_field = PAIRED_SCRIPT_SECTION.get(section_name)
+    schema_fields = {section_name: (REGENERATABLE_SECTIONS[section_name], ...)}
+    if paired_script_field:
+        schema_fields[paired_script_field] = (REGENERATABLE_SECTIONS[paired_script_field], ...)
+
     prompt = build_regeneration_prompt(
         section_name=section_name,
         current_content_json=json.dumps(current.content, indent=2),
         extra_instructions=instructions,
+        paired_script_field=paired_script_field,
     )
-    section_schema = create_model(f"Section_{section_name}", **{section_name: (REGENERATABLE_SECTIONS[section_name], ...)})
+    section_schema = create_model(f"Section_{section_name}", **schema_fields)
     result = ai_provider.generate_structured(system=SYSTEM_PROMPT, prompt=prompt, schema=section_schema)
     new_value = getattr(result.parsed, section_name)
 
     updated_dict = current_content.model_dump()
     updated_dict[section_name] = new_value.model_dump() if hasattr(new_value, "model_dump") else new_value
+    if paired_script_field:
+        new_script_value = getattr(result.parsed, paired_script_field)
+        updated_dict[paired_script_field] = new_script_value.model_dump() if hasattr(new_script_value, "model_dump") else new_script_value
     updated_content = LessonPlanContent.model_validate(updated_dict)
     updated_content.timeline = normalize_timeline(updated_content.timeline, plan.duration_minutes)
     worksheet_obj, worksheet_dict = _carried_worksheet(current, None)

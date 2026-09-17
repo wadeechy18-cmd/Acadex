@@ -5,7 +5,15 @@ from pydantic import BaseModel
 from app.ai.provider import AIGenerationResult, AIProvider, get_ai_provider
 from app.main import app
 from app.models.curriculum import Curriculum, CurriculumTopic, KeyStage, Objective, ProgrammeOfStudy, Subject, YearGroup
-from app.schemas.lesson_plan_content import Differentiation, HomeworkContent, LessonPlanContent, TimelineEntry, TranslatedContent, WorksheetContent
+from app.schemas.lesson_plan_content import (
+    Differentiation,
+    HomeworkContent,
+    LessonPlanContent,
+    TeacherScriptSection,
+    TimelineEntry,
+    TranslatedContent,
+    WorksheetContent,
+)
 from app.schemas.quick_lesson import QuickLessonIntent
 from tests.conftest import auth_headers, register_school, register_teacher
 
@@ -81,12 +89,20 @@ class FakeAIProvider(AIProvider):
             raw = self._results.pop(0) if self._results else matched_default
             parsed = raw if isinstance(raw, schema) else schema.model_validate(raw)
         else:
-            # A section-regeneration schema has exactly one field -- wrap the
-            # queued raw value (e.g. a plain string) as that field's value,
-            # defaulting to the matching section of SAMPLE_CONTENT.
-            field_name = next(iter(schema.model_fields))
-            raw = self._results.pop(0) if self._results else SAMPLE_CONTENT.model_dump()[field_name]
-            parsed = schema(**{field_name: raw})
+            # A section-regeneration schema has the primary section field
+            # and, for sections with a matching classroom-script field, that
+            # field too -- wrap the queued raw value (e.g. a plain string)
+            # as the primary field's value, defaulting every field to the
+            # matching section of SAMPLE_CONTENT (or an empty script section
+            # where SAMPLE_CONTENT has none set).
+            sample_dump = SAMPLE_CONTENT.model_dump()
+            field_names = list(schema.model_fields)
+            primary_field = field_names[0]
+            raw = self._results.pop(0) if self._results else sample_dump[primary_field]
+            values = {primary_field: raw}
+            for field_name in field_names[1:]:
+                values[field_name] = sample_dump[field_name] or TeacherScriptSection().model_dump()
+            parsed = schema(**values)
 
         return AIGenerationResult(parsed=parsed, input_tokens=123, output_tokens=456, model="fake-model")
 
@@ -308,6 +324,25 @@ def test_regenerate_section_only_changes_that_section(client, db_session):
     assert body["generation_kind"] == "section_regeneration"
     assert body["content"]["starter"] == "A brand new starter activity about fractions."
     assert body["content"]["title"] == SAMPLE_CONTENT.title  # everything else preserved
+
+
+def test_regenerate_section_also_regenerates_the_matching_script(client, db_session):
+    seed = _seed_curriculum(db_session)
+    teacher = register_teacher(client)
+    plan = _create_plan(client, seed, teacher)
+
+    fake = override_ai_provider("A brand new starter activity about fractions.")
+    res = client.post(
+        f"/api/v1/lesson-plans/{plan['id']}/sections/starter/regenerate", json={}, headers=auth_headers(teacher)
+    )
+    clear_ai_override()
+    assert res.status_code == 201, res.text
+    # Regenerating "starter" must also ask for "starter_script" in the same
+    # call -- otherwise the classroom script (what the view page actually
+    # displays) would silently go stale while only the plain summary changes.
+    schema_used = fake.calls[-1][2]
+    assert set(schema_used.model_fields) == {"starter", "starter_script"}
+    assert res.json()["content"]["starter_script"] is not None
 
 
 def test_regenerate_rejects_an_unknown_section(client, db_session):
