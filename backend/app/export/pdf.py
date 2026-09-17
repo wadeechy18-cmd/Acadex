@@ -58,6 +58,18 @@ def render_lesson_plan_pdf(content: LessonPlanContent, subject_name: str, year_g
             story.append(Paragraph(f"<b>WATCH OUT FOR:</b> {script.watch_out_for}", styles["Normal"]))
         story.append(Spacer(1, 8))
 
+    # Pre-authored/imported plans sometimes have no distinct "guided
+    # practice" or "independent practice" text of their own -- see the same
+    # check in the lesson plan page -- so those get skipped rather than
+    # printing the main teaching paragraph twice.
+    guided_duplicates_main = (
+        content.guided_practice_script is None
+        and content.teacher_explanation_script is None
+        and content.guided_practice.strip()
+        and content.guided_practice.strip() == content.teacher_explanation.strip()
+    )
+    independent_duplicates_main = content.independent_practice.strip() == content.teacher_explanation.strip()
+
     section("Overview", content.overview)
     section("Learning objectives", content.learning_objectives)
     section("Success criteria", content.success_criteria)
@@ -66,8 +78,10 @@ def render_lesson_plan_pdf(content: LessonPlanContent, subject_name: str, year_g
     section("Resources needed", content.resources_needed)
     script_section("Starter", content.starter_script, content.starter)
     script_section("Main teaching / explanation", content.teacher_explanation_script, content.teacher_explanation)
-    script_section("Guided practice", content.guided_practice_script, content.guided_practice)
-    section("Independent practice", content.independent_practice)
+    if not guided_duplicates_main:
+        script_section("Guided practice", content.guided_practice_script, content.guided_practice)
+    if not independent_duplicates_main:
+        section("Independent practice", content.independent_practice)
     section("Key questions", content.key_questions)
     section("Differentiation - Support", content.differentiation.support)
     section("Differentiation - Core", content.differentiation.core)

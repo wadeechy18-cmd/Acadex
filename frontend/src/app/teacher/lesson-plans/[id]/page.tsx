@@ -442,6 +442,28 @@ export default function LessonPlanEditorPage() {
   const independentTime = timeLabel(findTimelineMatch(content.timeline, ["independent"]));
   const plenaryTime = timeLabel(findTimelineMatch(content.timeline, ["plenary"]));
 
+  // Pre-authored/imported plans sometimes have no distinct "guided practice"
+  // text in their source data, so it was filled in with the same wording as
+  // the main teaching section -- showing it as its own numbered block would
+  // just repeat that paragraph. Hide it in that case rather than duplicate.
+  const guidedDuplicatesMain =
+    !content.guided_practice_script &&
+    !content.teacher_explanation_script &&
+    content.guided_practice.trim().length > 0 &&
+    content.guided_practice.trim() === content.teacher_explanation.trim();
+  // Same issue can affect independent practice (most visible for EYFS,
+  // which describes one blended activity rather than a separate
+  // independent task) -- keep the section for its differentiation grid,
+  // but don't repeat the identical paragraph above it.
+  const independentDuplicatesMain = content.independent_practice.trim() === content.teacher_explanation.trim();
+
+  let stepNumber = 1;
+  const starterStep = stepNumber++;
+  const mainStep = stepNumber++;
+  const guidedStep = guidedDuplicatesMain ? null : stepNumber++;
+  const independentStep = stepNumber++;
+  const plenaryStep = stepNumber++;
+
   return (
     <main className="mx-auto flex max-w-5xl gap-8 p-8 print:block">
       <div className="flex-1">
@@ -556,7 +578,7 @@ export default function LessonPlanEditorPage() {
 
               <div className="mt-4 rounded-lg border p-4">
                 <div className="flex items-baseline justify-between">
-                  <h3 className="font-semibold">1. Starter</h3>
+                  <h3 className="font-semibold">{starterStep}. Starter</h3>
                   {starterTime && <span className="text-xs text-muted-foreground">{starterTime}</span>}
                 </div>
                 <div className="mt-2">
@@ -566,7 +588,7 @@ export default function LessonPlanEditorPage() {
 
               <div className="mt-4 rounded-lg border p-4">
                 <div className="flex items-baseline justify-between">
-                  <h3 className="font-semibold">2. Main Teaching / Explanation</h3>
+                  <h3 className="font-semibold">{mainStep}. Main Teaching / Explanation</h3>
                   {mainTime && <span className="text-xs text-muted-foreground">{mainTime}</span>}
                 </div>
                 <div className="mt-2">
@@ -579,28 +601,34 @@ export default function LessonPlanEditorPage() {
                 </div>
               </div>
 
-              <div className="mt-4 rounded-lg border p-4">
-                <div className="flex items-baseline justify-between">
-                  <h3 className="font-semibold">3. Guided Practice</h3>
-                  {guidedTime && <span className="text-xs text-muted-foreground">{guidedTime}</span>}
+              {guidedStep != null && (
+                <div className="mt-4 rounded-lg border p-4">
+                  <div className="flex items-baseline justify-between">
+                    <h3 className="font-semibold">{guidedStep}. Guided Practice</h3>
+                    {guidedTime && <span className="text-xs text-muted-foreground">{guidedTime}</span>}
+                  </div>
+                  <div className="mt-2">
+                    <ScriptBlock
+                      label=""
+                      script={content.guided_practice_script}
+                      fallbackText={content.guided_practice}
+                      bnScript={translatedLesson?.guided_practice_script}
+                    />
+                  </div>
                 </div>
-                <div className="mt-2">
-                  <ScriptBlock
-                    label=""
-                    script={content.guided_practice_script}
-                    fallbackText={content.guided_practice}
-                    bnScript={translatedLesson?.guided_practice_script}
-                  />
-                </div>
-              </div>
+              )}
 
               <div className="mt-4 rounded-lg border p-4">
                 <div className="flex items-baseline justify-between">
-                  <h3 className="font-semibold">4. Independent Activity</h3>
+                  <h3 className="font-semibold">{independentStep}. Independent Activity</h3>
                   {independentTime && <span className="text-xs text-muted-foreground">{independentTime}</span>}
                 </div>
-                <p className="mt-2">{content.independent_practice}</p>
-                {showBangla && translatedLesson && <p className="mt-1 text-muted-foreground">বাংলা: {translatedLesson.independent_practice}</p>}
+                {!independentDuplicatesMain && (
+                  <>
+                    <p className="mt-2">{content.independent_practice}</p>
+                    {showBangla && translatedLesson && <p className="mt-1 text-muted-foreground">বাংলা: {translatedLesson.independent_practice}</p>}
+                  </>
+                )}
                 <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
                   <div>
                     <p className="text-xs font-semibold text-muted-foreground">Support</p>
@@ -619,7 +647,7 @@ export default function LessonPlanEditorPage() {
 
               <div className="mt-4 rounded-lg border p-4">
                 <div className="flex items-baseline justify-between">
-                  <h3 className="font-semibold">5. Plenary</h3>
+                  <h3 className="font-semibold">{plenaryStep}. Plenary</h3>
                   {plenaryTime && <span className="text-xs text-muted-foreground">{plenaryTime}</span>}
                 </div>
                 <div className="mt-2">
